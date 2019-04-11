@@ -1,0 +1,53 @@
+kind: pipeline
+name: default
+
+trigger:
+  event:
+    exclude:
+      - pull_request
+
+steps:
+- name: shellcheck
+  image: koalaman/shellcheck-alpine
+  pull: always
+  commands:
+    - shellcheck --version
+    - for file in $(find ./root -type f); do echo $file; shellcheck $file; done;
+
+- name: build
+  image: plugins/docker
+  pull: always
+  settings:
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    repo: hotio/base
+    auto_tag: true
+    cache_from: "hotio/base"
+
+- name: trigger  
+  image: plugins/downstream
+  pull: always
+  settings:
+    server: https://cloud.drone.io
+    token:
+      from_secret: drone_token
+    fork: true
+    repositories:
+      - hotio/docker-mono
+      - hotio/docker-nanomon
+      - hotio/docker-nanode
+      - hotio/docker-tautulli
+      - hotio/docker-sabnzbd
+      - hotio/docker-ombi
+      - hotio/docker-nzbhydra2
+      - hotio/docker-nzbget
+      - hotio/docker-bazarr
+
+- name: microbadger
+  image: plugins/webhook
+  pull: always
+  settings:
+    urls:
+      - https://hooks.microbadger.com/images/hotio/base/zMc2w-u5yheypZGyvnun1XZArvM=
