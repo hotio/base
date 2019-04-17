@@ -29,7 +29,7 @@ RUN apt update && \
     curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v1.22.1.0/s6-overlay-amd64.tar.gz" | tar xzf - -C / && \
 # install rclone
 # https://github.com/ncw/rclone/releases
-    curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v1.45/rclone-v1.45-linux-amd64.deb" && dpkg --install "/tmp/rclone.deb" && \
+    curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v1.47.0/rclone-v1.47.0-linux-amd64.deb" && dpkg --install "/tmp/rclone.deb" && \
 # install rar2fs
 # https://github.com/hasse69/rar2fs/releases
 # https://www.rarlab.com/rar_add.htm
