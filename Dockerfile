@@ -26,7 +26,7 @@ RUN apt update && \
     locale-gen en_US.UTF-8 && \
 # install s6-overlay
 # https://github.com/just-containers/s6-overlay/releases
-    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v1.21.7.0/s6-overlay-amd64.tar.gz" | tar xzf - -C / && \
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v1.22.1.0/s6-overlay-amd64.tar.gz" | tar xzf - -C / && \
 # install rclone
 # https://github.com/ncw/rclone/releases
     curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v1.45/rclone-v1.45-linux-amd64.deb" && dpkg --install "/tmp/rclone.deb" && \
