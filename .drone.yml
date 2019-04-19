@@ -102,16 +102,19 @@ trigger:
 steps:
 - name: manifest
   image: plugins/manifest
+  pull: always
   settings:
+    ignore_missing: true
     username:
       from_secret: docker_username
     password:
       from_secret: docker_password
-    target: hotio/base:${DRONE_TAG}
+    target: hotio/base:latest
     template: hotio/base:${DRONE_TAG}-OS-ARCH
     platforms:
       - linux/amd64
       - linux/arm64
+      - linux/arm
 
 depends_on:
   - release-amd64
