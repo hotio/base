@@ -30,9 +30,6 @@ steps:
       from_secret: docker_password
     repo: hotio/base
     cache_from: hotio/base:develop
-    build_args:
-      - ARCH_S6=amd64
-      - ARCH_RCLONE=amd64
     tags:
       - develop
 
@@ -59,9 +56,6 @@ steps:
       from_secret: docker_password
     repo: hotio/base
     cache_from: hotio/base
-    build_args:
-      - ARCH_S6=amd64
-      - ARCH_RCLONE=amd64
     tags:
       - ${DRONE_TAG}-linux-amd64
 
