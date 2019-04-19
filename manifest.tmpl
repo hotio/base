@@ -1,25 +1,18 @@
-image: hotio/base:{{#if build.tag}}{{trimPrefix "v" build.tag}}{{else}}latest{{/if}}
-{{#if build.tags}}
-tags:
-  - latest
-{{#each build.tags}}
-  - {{this}}
-{{/each}}
-{{/if}}
+image: hotio/base:{{#if build.tag}}latest{{else}}develop{{/if}}
 manifests:
   -
-    image: hotio/base:{{#if build.tag}}{{trimPrefix "v" build.tag}}-{{/if}}linux-amd64
+    image: hotio/base:{{#if build.tag}}{{build.tag}}{{else}}develop{{/if}}-linux-amd64
     platform:
       architecture: amd64
       os: linux
   -
-    image: hotio/base:{{#if build.tag}}{{trimPrefix "v" build.tag}}-{{/if}}linux-arm64
+    image: hotio/base:{{#if build.tag}}{{build.tag}}{{else}}develop{{/if}}-linux-arm64
     platform:
       architecture: arm64
       os: linux
       variant: v8
   -
-    image: hotio/base:{{#if build.tag}}{{trimPrefix "v" build.tag}}-{{/if}}linux-arm
+    image: hotio/base:{{#if build.tag}}{{build.tag}}{{else}}develop{{/if}}-linux-arm
     platform:
       architecture: arm
       os: linux
