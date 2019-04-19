@@ -92,9 +92,6 @@ steps:
 kind: pipeline
 name: manifest
 
-clone:
-  disable: true
-
 trigger:
   event:
     - tag
