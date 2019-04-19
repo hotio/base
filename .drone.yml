@@ -1,10 +1,16 @@
+---
 kind: pipeline
-name: default
+name: develop
+
+platform:
+  os: linux
+  arch: amd64
 
 trigger:
   event:
     exclude:
       - pull_request
+      - tag
 
 steps:
 - name: shellcheck
@@ -23,31 +29,93 @@ steps:
     password:
       from_secret: docker_password
     repo: hotio/base
-    auto_tag: true
-    cache_from: "hotio/base"
+    cache_from: hotio/base:develop
+    build_args:
+      - ARCH_S6=amd64
+      - ARCH_RCLONE=amd64
+    tags:
+      - develop
 
-- name: trigger  
-  image: plugins/downstream
+---
+kind: pipeline
+name: release-amd64
+
+platform:
+  os: linux
+  arch: amd64
+
+trigger:
+  event:
+    - tag
+
+steps:
+- name: build
+  image: plugins/docker
   pull: always
   settings:
-    server: https://cloud.drone.io
-    token:
-      from_secret: drone_token
-    fork: true
-    repositories:
-      - hotio/docker-mono
-      - hotio/docker-nanomon
-      - hotio/docker-nanode
-      - hotio/docker-tautulli
-      - hotio/docker-sabnzbd
-      - hotio/docker-ombi
-      - hotio/docker-nzbhydra2
-      - hotio/docker-nzbget
-      - hotio/docker-bazarr
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    repo: hotio/base
+    cache_from: hotio/base
+    build_args:
+      - ARCH_S6=amd64
+      - ARCH_RCLONE=amd64
+    tags:
+      - ${DRONE_TAG}-linux-amd64
 
-- name: microbadger
-  image: plugins/webhook
+---
+kind: pipeline
+name: release-arm64
+
+platform:
+  os: linux
+  arch: arm64
+
+trigger:
+  event:
+    - tag
+
+steps:
+- name: build
+  image: plugins/docker
   pull: always
   settings:
-    urls:
-      - https://hooks.microbadger.com/images/hotio/base/zMc2w-u5yheypZGyvnun1XZArvM=
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    repo: hotio/base
+    cache_from: hotio/base
+    build_args:
+      - ARCH_S6=aarch64
+      - ARCH_RCLONE=arm64
+    tags:
+      - ${DRONE_TAG}-linux-arm64
+
+---
+kind: pipeline
+name: manifest
+
+trigger:
+  event:
+    - tag
+
+steps:
+- name: manifest
+  image: plugins/manifest
+  settings:
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    target: hotio/base:latest
+    template: hotio/base:${DRONE_TAG}-OS-ARCH
+    platforms:
+      - linux/amd64
+      - linux/arm64
+
+depends_on:
+  - release-amd64
+  - release-arm64
