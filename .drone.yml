@@ -92,6 +92,9 @@ steps:
 kind: pipeline
 name: manifest
 
+clone:
+  disable: true
+
 trigger:
   event:
     - tag
@@ -104,7 +107,7 @@ steps:
       from_secret: docker_username
     password:
       from_secret: docker_password
-    target: hotio/base:latest
+    target: hotio/base:${DRONE_TAG}
     template: hotio/base:${DRONE_TAG}-OS-ARCH
     platforms:
       - linux/amd64
