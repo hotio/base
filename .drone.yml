@@ -27,6 +27,7 @@ trigger:
   event:
     - push
 
+steps:
 - name: build
   image: plugins/docker
   pull: always
@@ -162,4 +163,3 @@ depends_on:
   - release-amd64
   - release-arm64
   - release-arm
-
