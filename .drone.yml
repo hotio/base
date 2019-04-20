@@ -67,6 +67,9 @@ steps:
       from_secret: docker_password
     repo: hotio/base
     cache_from: hotio/base:develop
+    build_args:
+      - ARCH_S6=aarch64
+      - ARCH_RCLONE=arm64
     tags:
       - develop-linux-arm64
 
@@ -96,6 +99,9 @@ steps:
       from_secret: docker_password
     repo: hotio/base
     cache_from: hotio/base:develop
+    build_args:
+      - ARCH_S6=arm
+      - ARCH_RCLONE=arm
     tags:
       - develop-linux-arm
 
