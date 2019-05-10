@@ -11,7 +11,7 @@ if [[ "${RCLONE}" == *:*,* ]]; then
         for mount in "${mounts[@]}"; do
             IFS=',' && read -r -a mountparts <<< "${mount}" && IFS="${DEFAULTIFS}"
             mkdir -p "${mountparts[1]}"
-            rclone mount "${mountparts[0]}" "${mountparts[1]}" --daemon --allow-other --uid "${PUID}" --gid "${PGID}" --umask "${UMASK}" "${mountparts[2]}" && echo -e '\e[32m'"Mounting ${mountparts[0]} as ${mountparts[1]} succeeded."'\e[0m' || echo -e '\e[31m'"Mounting ${mountparts[0]} as ${mountparts[1]} failed!"'\e[0m'
+            rclone mount "${mountparts[0]}" "${mountparts[1]}" --daemon --allow-other --uid "${PUID}" --gid "${PGID}" --umask "${UMASK}" && echo -e '\e[32m'"Mounting ${mountparts[0]} as ${mountparts[1]} succeeded."'\e[0m' || echo -e '\e[31m'"Mounting ${mountparts[0]} as ${mountparts[1]} failed!"'\e[0m'
         done
     else
         echo -e '\e[33m'"No rclone.conf configuration file found! Skipping rclone mount."'\e[0m'
