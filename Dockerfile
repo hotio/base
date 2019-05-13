@@ -37,7 +37,7 @@ RUN apt update && \
 # https://www.rarlab.com/rar_add.htm
     tempdir="$(mktemp -d)" && \
     curl -fsSL "https://github.com/hasse69/rar2fs/archive/v1.27.2.tar.gz" | tar xzf - -C "${tempdir}" --strip-components=1 && \
-    curl -fsSL "https://www.rarlab.com/rar/unrarsrc-5.7.4.tar.gz" | tar xzf - -C "${tempdir}" && \
+    curl -fsSL "https://www.rarlab.com/rar/unrarsrc-5.7.5.tar.gz" | tar xzf - -C "${tempdir}" && \
     cd "${tempdir}/unrar" && \
     make lib && make install-lib && \
     cd "${tempdir}" && \
