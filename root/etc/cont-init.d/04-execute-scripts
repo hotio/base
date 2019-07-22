@@ -2,6 +2,7 @@
 # shellcheck shell=bash
 
 umask "${UMASK}"
+shopt -s nullglob
 
 if [[ -d "${CONFIG_DIR}/scripts.d" ]]; then
     for script in "${CONFIG_DIR}/scripts.d/"*; do
