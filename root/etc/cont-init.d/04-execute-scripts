@@ -4,7 +4,9 @@
 umask "${UMASK}"
 
 if [[ -d "${CONFIG_DIR}/scripts.d" ]]; then
+    shopt -s nullglob
     for script in "${CONFIG_DIR}/scripts.d/"*; do
         ${script}
     done
+    shopt -u nullglob
 fi
