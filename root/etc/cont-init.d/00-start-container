@@ -7,22 +7,16 @@ figlet "${APP}"
 
 echo "
 ----------------------------------------------------------------------
-DONATIONS
-----------------------------------------------------------------------
-NANO: xrb_1bxqm6nsm55s64rgf8f5k9m795hda535to6y15ik496goatakpupjfqzokfc
-BTC: 39W6dcaG3uuF5mZTRL4h6Ghem74kUBHrmz
-LTC: MMUFcGLiK6DnnHGFnN2MJLyTfANXw57bDY
-----------------------------------------------------------------------
 ENVIRONMENT
 ----------------------------------------------------------------------
-PUID            | ${PUID}
-PGID            | ${PGID}
-UMASK           | ${UMASK}
-VERSION         | ${VERSION}
-BACKUP          | ${BACKUP}
-TZ              | ${TZ}
-RCLONE          | ${RCLONE}
-RAR2FS          | ${RAR2FS}
+PUID=${PUID}
+PGID=${PGID}
+UMASK=${UMASK}
+VERSION=${VERSION}
+BACKUP=${BACKUP}
+TZ=${TZ}
+RCLONE=${RCLONE}
+RAR2FS=${RAR2FS}
 ----------------------------------------------------------------------
 "
 
