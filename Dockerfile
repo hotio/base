@@ -5,7 +5,7 @@ ARG DEBIAN_FRONTEND="noninteractive"
 ARG ARCH_S6="amd64"
 ARG ARCH_RCLONE="amd64"
 
-ENV APP_DIR="/app" CONFIG_DIR="/config" PUID="1000" PGID="1000" UMASK="022" VERSION="image" BACKUP="yes"
+ENV APP_DIR="/app" CONFIG_DIR="/config" PUID="1000" PGID="1000" UMASK="022" VERSION="image"
 ENV XDG_CONFIG_HOME="${CONFIG_DIR}/.config" XDG_CACHE_HOME="${CONFIG_DIR}/.cache" XDG_DATA_HOME="${CONFIG_DIR}/.local/share" LANG="en_US.UTF-8" LANGUAGE="en_US:en" LC_ALL="en_US.UTF-8"
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
@@ -50,5 +50,3 @@ RUN apt update && \
     apt autoremove -y && \
     apt clean && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
-
-COPY root/ /
