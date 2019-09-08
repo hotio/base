@@ -21,7 +21,7 @@ RUN mkdir "${APP_DIR}" && \
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
-        ca-certificates jq unzip curl fuse python figlet \
+        ca-certificates jq unzip curl fuse python \
         libfuse-dev autoconf automake build-essential \
         locales tzdata && \
 # generate locale
