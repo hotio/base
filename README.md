@@ -1,7 +1,10 @@
-# docker-base
+# [docker-base](https://github.com/hotio/docker-base)
 
-[![badge](https://images.microbadger.com/badges/image/hotio/base.svg)](https://microbadger.com/images/hotio/base "Get your own image badge on microbadger.com")
-[![badge](https://images.microbadger.com/badges/version/hotio/base.svg)](https://microbadger.com/images/hotio/base "Get your own version badge on microbadger.com")
-[![badge](https://images.microbadger.com/badges/commit/hotio/base.svg)](https://microbadger.com/images/hotio/base "Get your own commit badge on microbadger.com")
+![Docker Pulls](https://img.shields.io/docker/pulls/hotio/base?style=flat-square)
+![Drone (cloud)](https://img.shields.io/drone/build/hotio/docker-base?style=flat-square)
 
-A docker image that serves as a base for others.
+## Donations
+
+NANO: `xrb_1bxqm6nsm55s64rgf8f5k9m795hda535to6y15ik496goatakpupjfqzokfc`  
+BTC: `39W6dcaG3uuF5mZTRL4h6Ghem74kUBHrmz`  
+LTC: `MMUFcGLiK6DnnHGFnN2MJLyTfANXw57bDY`
