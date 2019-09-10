@@ -39,6 +39,9 @@ steps:
       from_secret: docker_password
     repo: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
     cache_from: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
+    build_args:
+      - ARCH_S6=amd64
+      - ARCH_RCLONE=amd64
     tags:
       - ${DRONE_TAG=develop}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
 

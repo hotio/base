@@ -2,8 +2,8 @@ FROM ubuntu:18.04
 LABEL maintainer="hotio"
 
 ARG DEBIAN_FRONTEND="noninteractive"
-ARG ARCH_S6="amd64"
-ARG ARCH_RCLONE="amd64"
+ARG ARCH_S6
+ARG ARCH_RCLONE
 
 ENV APP_DIR="/app" CONFIG_DIR="/config" PUID="1000" PGID="1000" UMASK="022" VERSION="image"
 ENV XDG_CONFIG_HOME="${CONFIG_DIR}/.config" XDG_CACHE_HOME="${CONFIG_DIR}/.cache" XDG_DATA_HOME="${CONFIG_DIR}/.local/share" LANG="en_US.UTF-8" LANGUAGE="en_US:en" LC_ALL="en_US.UTF-8"
