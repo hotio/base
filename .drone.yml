@@ -41,7 +41,7 @@ steps:
       - ARCH_S6=amd64
       - ARCH_RCLONE=amd64
     tags:
-      - ${DRONE_REPO_BRANCH}-${DRONE_COMMIT_SHA:0:6}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
+      - ${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
 
 depends_on:
   - checks
@@ -73,7 +73,7 @@ steps:
       - ARCH_S6=aarch64
       - ARCH_RCLONE=arm64
     tags:
-      - ${DRONE_REPO_BRANCH}-${DRONE_COMMIT_SHA:0:6}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
+      - ${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
 
 depends_on:
   - checks
@@ -105,7 +105,7 @@ steps:
       - ARCH_S6=arm
       - ARCH_RCLONE=arm
     tags:
-      - ${DRONE_REPO_BRANCH}-${DRONE_COMMIT_SHA:0:6}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
+      - ${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
 
 depends_on:
   - checks
@@ -131,7 +131,7 @@ steps:
     password:
       from_secret: docker_password
     target: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:latest
-    template: ${DRONE_REPO_BRANCH}-${DRONE_COMMIT_SHA:0:6}-${DRONE_BUILD_NUMBER}-OS-ARCH
+    template: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-OS-ARCH
     platforms:
       - linux/amd64
       - linux/arm
@@ -163,8 +163,8 @@ steps:
       from_secret: docker_username
     password:
       from_secret: docker_password
-    target: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_REPO_BRANCH}
-    template: ${DRONE_REPO_BRANCH}-${DRONE_COMMIT_SHA:0:6}-${DRONE_BUILD_NUMBER}-OS-ARCH
+    target: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}
+    template: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-OS-ARCH
     platforms:
       - linux/amd64
       - linux/arm
