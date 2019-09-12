@@ -191,6 +191,7 @@ name: downstream
 trigger:
   branch:
     - master
+  cron: [ security_build ]
 
 steps:
 - name: trigger
