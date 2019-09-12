@@ -193,44 +193,18 @@ trigger:
     - master
 
 steps:
-- name: trigger-base-images
+- name: trigger
   image: plugins/downstream
   settings:
     server: https://cloud.drone.io
     token:
       from_secret: drone_token
     fork: true
-    wait: true
-    timeout: 600
+    deploy: production
+    last_successful: true
     repositories:
       - ${DRONE_REPO_OWNER}/docker-mono@master
       - ${DRONE_REPO_OWNER}/docker-dotnetcore@master
-
-- name: trigger-other-images
-  image: plugins/downstream
-  settings:
-    server: https://cloud.drone.io
-    token:
-      from_secret: drone_token
-    fork: true
-    wait: true
-    timeout: 600
-    repositories:
-      - ${DRONE_REPO_OWNER}/docker-apcupsd2influxdb@master
-      - ${DRONE_REPO_OWNER}/docker-bazarr@master
-      - ${DRONE_REPO_OWNER}/docker-cloudflare-ddns@master
-      - ${DRONE_REPO_OWNER}/docker-hddtemp2influxdb@master
-      - ${DRONE_REPO_OWNER}/docker-nzbget@master
-      - ${DRONE_REPO_OWNER}/docker-nzbhydra2@master
-      - ${DRONE_REPO_OWNER}/docker-restic@master
-      - ${DRONE_REPO_OWNER}/docker-sabnzbd@master
-      - ${DRONE_REPO_OWNER}/docker-tautulli@master
-      - ${DRONE_REPO_OWNER}/docker-lidarr@master
-      - ${DRONE_REPO_OWNER}/docker-radarr@master
-      - ${DRONE_REPO_OWNER}/docker-sonarr@master
-      - ${DRONE_REPO_OWNER}/docker-sonarr3@master
-      - ${DRONE_REPO_OWNER}/docker-jackett@master
-      - ${DRONE_REPO_OWNER}/docker-ombi@master
 
 depends_on:
   - manifest
