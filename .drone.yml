@@ -189,10 +189,7 @@ kind: pipeline
 name: downstream
 
 trigger:
-  event:
-    - push
-  branch:
-    - master
+  cron: [ security_build ]
 
 steps:
 - name: trigger
