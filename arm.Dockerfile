@@ -2,8 +2,6 @@ FROM ubuntu:18.04
 LABEL maintainer="hotio"
 
 ARG DEBIAN_FRONTEND="noninteractive"
-ARG ARCH_S6
-ARG ARCH_RCLONE
 
 ENV APP_DIR="/app" CONFIG_DIR="/config" PUID="1000" PGID="1000" UMASK="022" VERSION="image"
 ENV XDG_CONFIG_HOME="${CONFIG_DIR}/.config" XDG_CACHE_HOME="${CONFIG_DIR}/.cache" XDG_DATA_HOME="${CONFIG_DIR}/.local/share" LANG="en_US.UTF-8" LANGUAGE="en_US:en" LC_ALL="en_US.UTF-8"
@@ -18,6 +16,8 @@ RUN mkdir "${APP_DIR}" && \
     useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
     usermod -G users hotio
 
+COPY versions/ /tmp/
+
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
@@ -27,17 +27,17 @@ RUN apt update && \
 # generate locale
     locale-gen en_US.UTF-8 && \
 # install s6-overlay
-# https://github.com/just-containers/s6-overlay/releases
-    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v1.22.1.0/s6-overlay-${ARCH_S6}.tar.gz" | tar xzf - -C / && \
+    version=$(sed -n '2p' /tmp/version.s6-overlay) && \
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${version}/s6-overlay-arm.tar.gz" | tar xzf - -C / && \
 # install rclone
-# https://github.com/ncw/rclone/releases
-    curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v1.49.1/rclone-v1.49.1-linux-${ARCH_RCLONE}.deb" && dpkg --install "/tmp/rclone.deb" && \
+    version=$(sed -n '2p' /tmp/version.rclone) && \
+    curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v${version}/rclone-v${version}-linux-arm.deb" && dpkg --install "/tmp/rclone.deb" && \
 # install rar2fs
-# https://github.com/hasse69/rar2fs/releases
-# https://www.rarlab.com/rar_add.htm
     tempdir="$(mktemp -d)" && \
-    curl -fsSL "https://github.com/hasse69/rar2fs/archive/v1.27.2.tar.gz" | tar xzf - -C "${tempdir}" --strip-components=1 && \
-    curl -fsSL "https://www.rarlab.com/rar/unrarsrc-5.7.5.tar.gz" | tar xzf - -C "${tempdir}" && \
+    version=$(sed -n '2p' /tmp/version.rar2fs) && \
+    curl -fsSL "https://github.com/hasse69/rar2fs/archive/v${version}.tar.gz" | tar xzf - -C "${tempdir}" --strip-components=1 && \
+    version=$(sed -n '2p' /tmp/version.unrarsrc) && \
+    curl -fsSL "https://www.rarlab.com/rar/unrarsrc-${version}.tar.gz" | tar xzf - -C "${tempdir}" && \
     cd "${tempdir}/unrar" && \
     make lib && make install-lib && \
     cd "${tempdir}" && \
