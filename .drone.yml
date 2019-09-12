@@ -112,16 +112,17 @@ depends_on:
 
 ---
 kind: pipeline
-name: manifest-master
+name: manifest
 
 trigger:
   event:
     - push
-  branch:
-    - master
 
 steps:
-- name: manifest
+- name: master
+  when:
+    branch:
+      - master
   image: plugins/manifest
   pull: always
   settings:
@@ -137,24 +138,11 @@ steps:
       - linux/arm
       - linux/arm64
 
-depends_on:
-  - linux-amd64
-  - linux-arm64
-  - linux-arm
-
----
-kind: pipeline
-name: manifest-branch
-
-trigger:
-  event:
-    - push
-  branch:
-    exclude:
-      - master
-
-steps:
-- name: manifest
+- name: branch
+  when:
+    branch:
+      exclude:
+        - master
   image: plugins/manifest
   pull: always
   settings:
@@ -195,3 +183,28 @@ steps:
     DOCKERHUB_PASSWORD:
       from_secret: docker_password
     DOCKERHUB_REPOSITORY: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
+
+---
+kind: pipeline
+name: downstream
+
+trigger:
+  event:
+    - push
+  branch:
+    - master
+
+steps:
+- name: downstream
+  image: plugins/downstream
+  settings:
+    server: https://cloud.drone.io
+    token:
+      from_secret: drone_token
+    fork: true
+    repositories:
+      - ${DRONE_REPO_OWNER}/docker-mono@master
+      - ${DRONE_REPO_OWNER}/docker-dotnetcore@master
+
+depends_on:
+  - manifest
