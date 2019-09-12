@@ -193,14 +193,26 @@ trigger:
     - master
 
 steps:
-- name: trigger
+- name: trigger-base-images
   image: plugins/downstream
   settings:
-    deploy: security-build
     server: https://cloud.drone.io
     token:
       from_secret: drone_token
     fork: true
+    wait: true
+    repositories:
+      - ${DRONE_REPO_OWNER}/docker-mono@master
+      - ${DRONE_REPO_OWNER}/docker-dotnetcore@master
+
+- name: trigger-other-images
+  image: plugins/downstream
+  settings:
+    server: https://cloud.drone.io
+    token:
+      from_secret: drone_token
+    fork: true
+    wait: true
     repositories:
       - ${DRONE_REPO_OWNER}/docker-mono@master
       - ${DRONE_REPO_OWNER}/docker-dotnetcore@master
@@ -213,6 +225,12 @@ steps:
       - ${DRONE_REPO_OWNER}/docker-restic@master
       - ${DRONE_REPO_OWNER}/docker-sabnzbd@master
       - ${DRONE_REPO_OWNER}/docker-tautulli@master
+      - ${DRONE_REPO_OWNER}/docker-lidarr@master
+      - ${DRONE_REPO_OWNER}/docker-radarr@master
+      - ${DRONE_REPO_OWNER}/docker-sonarr@master
+      - ${DRONE_REPO_OWNER}/docker-sonarr3@master
+      - ${DRONE_REPO_OWNER}/docker-jackett@master
+      - ${DRONE_REPO_OWNER}/docker-ombi@master
 
 depends_on:
   - manifest
