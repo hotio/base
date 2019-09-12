@@ -189,7 +189,8 @@ kind: pipeline
 name: downstream
 
 trigger:
-  cron: [ security_build ]
+  branch:
+    - master
 
 steps:
 - name: trigger
@@ -203,6 +204,15 @@ steps:
     repositories:
       - ${DRONE_REPO_OWNER}/docker-mono@master
       - ${DRONE_REPO_OWNER}/docker-dotnetcore@master
+      - ${DRONE_REPO_OWNER}/docker-apcupsd2influxdb@master
+      - ${DRONE_REPO_OWNER}/docker-bazarr@master
+      - ${DRONE_REPO_OWNER}/docker-cloudflare-ddns@master
+      - ${DRONE_REPO_OWNER}/docker-hddtemp2influxdb@master
+      - ${DRONE_REPO_OWNER}/docker-nzbget@master
+      - ${DRONE_REPO_OWNER}/docker-nzbhydra2@master
+      - ${DRONE_REPO_OWNER}/docker-restic@master
+      - ${DRONE_REPO_OWNER}/docker-sabnzbd@master
+      - ${DRONE_REPO_OWNER}/docker-tautulli@master
 
 depends_on:
   - manifest
