@@ -199,8 +199,8 @@ steps:
     server: https://cloud.drone.io
     token:
       from_secret: drone_token
-    fork: true
     deploy: production
+    last_successful: true
     repositories:
       - ${DRONE_REPO_OWNER}/docker-mono@master
       - ${DRONE_REPO_OWNER}/docker-dotnetcore@master
