@@ -2,6 +2,8 @@ FROM ubuntu:18.04
 LABEL maintainer="hotio"
 
 ARG DEBIAN_FRONTEND="noninteractive"
+ARG ARCH
+ENV ARCH="${ARCH}"
 
 ENV APP_DIR="/app" CONFIG_DIR="/config" PUID="1000" PGID="1000" UMASK="022" VERSION="image"
 ENV XDG_CONFIG_HOME="${CONFIG_DIR}/.config" XDG_CACHE_HOME="${CONFIG_DIR}/.cache" XDG_DATA_HOME="${CONFIG_DIR}/.local/share" LANG="en_US.UTF-8" LANGUAGE="en_US:en" LC_ALL="en_US.UTF-8"
@@ -28,10 +30,10 @@ RUN apt update && \
     locale-gen en_US.UTF-8 && \
 # install s6-overlay
     version=$(sed -n '1p' /versions/s6-overlay) && \
-    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${version}/s6-overlay-amd64.tar.gz" | tar xzf - -C / && \
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${version}/s6-overlay-aarch64.tar.gz" | tar xzf - -C / && \
 # install rclone
     version=$(sed -n '1p' /versions/rclone) && \
-    curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v${version}/rclone-v${version}-linux-amd64.deb" && dpkg --install "/tmp/rclone.deb" && \
+    curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v${version}/rclone-v${version}-linux-arm64.deb" && dpkg --install "/tmp/rclone.deb" && \
 # install rar2fs
     tempdir="$(mktemp -d)" && \
     version=$(sed -n '1p' /versions/rar2fs) && \
