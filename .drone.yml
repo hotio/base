@@ -191,7 +191,6 @@ name: downstream
 trigger:
   branch:
     - master
-  cron: [ security_build ]
 
 steps:
 - name: trigger
@@ -201,6 +200,8 @@ steps:
     token:
       from_secret: drone_token
     fork: true
+    wait: true
+    timeout: 600
     repositories:
       - ${DRONE_REPO_OWNER}/docker-mono@master
       - ${DRONE_REPO_OWNER}/docker-dotnetcore@master
