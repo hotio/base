@@ -174,7 +174,7 @@ trigger:
     - master
 
 steps:
-- name: dockerhub-description
+- name: update
   image: peterevans/dockerhub-description:2.0.0
   pull: always
   environment:
@@ -195,7 +195,7 @@ trigger:
     - master
 
 steps:
-- name: downstream
+- name: trigger
   image: plugins/downstream
   settings:
     server: https://cloud.drone.io
