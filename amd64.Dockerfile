@@ -16,7 +16,7 @@ RUN mkdir "${APP_DIR}" && \
     useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
     usermod -G users hotio
 
-COPY versions/ /tmp/
+COPY root/ /
 
 # install packages
 RUN apt update && \
@@ -27,16 +27,16 @@ RUN apt update && \
 # generate locale
     locale-gen en_US.UTF-8 && \
 # install s6-overlay
-    version=$(sed -n '2p' /tmp/version.s6-overlay) && \
+    version=$(sed -n '2p' /versions/s6-overlay) && \
     curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${version}/s6-overlay-amd64.tar.gz" | tar xzf - -C / && \
 # install rclone
-    version=$(sed -n '2p' /tmp/version.rclone) && \
+    version=$(sed -n '2p' /versions/rclone) && \
     curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v${version}/rclone-v${version}-linux-amd64.deb" && dpkg --install "/tmp/rclone.deb" && \
 # install rar2fs
     tempdir="$(mktemp -d)" && \
-    version=$(sed -n '2p' /tmp/version.rar2fs) && \
+    version=$(sed -n '2p' /versions/rar2fs) && \
     curl -fsSL "https://github.com/hasse69/rar2fs/archive/v${version}.tar.gz" | tar xzf - -C "${tempdir}" --strip-components=1 && \
-    version=$(sed -n '2p' /tmp/version.unrarsrc) && \
+    version=$(sed -n '2p' /versions/unrarsrc) && \
     curl -fsSL "https://www.rarlab.com/rar/unrarsrc-${version}.tar.gz" | tar xzf - -C "${tempdir}" && \
     cd "${tempdir}/unrar" && \
     make lib && make install-lib && \
