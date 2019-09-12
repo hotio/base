@@ -209,7 +209,6 @@ steps:
       - ${DRONE_REPO_OWNER}/docker-hddtemp2influxdb@master
       - ${DRONE_REPO_OWNER}/docker-nzbget@master
       - ${DRONE_REPO_OWNER}/docker-nzbhydra2@master
-      - ${DRONE_REPO_OWNER}/docker-ombi@master
       - ${DRONE_REPO_OWNER}/docker-restic@master
       - ${DRONE_REPO_OWNER}/docker-sabnzbd@master
       - ${DRONE_REPO_OWNER}/docker-tautulli@master
