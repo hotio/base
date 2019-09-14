@@ -57,7 +57,7 @@ steps:
     password:
       from_secret: docker_password
     repo: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
-    cache_from: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
+    cache_from: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}
     dockerfile: ${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}.Dockerfile
     build_args:
       - ARCH=${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
@@ -89,7 +89,7 @@ steps:
     password:
       from_secret: docker_password
     repo: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
-    cache_from: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
+    cache_from: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}
     dockerfile: ${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}.Dockerfile
     build_args:
       - ARCH=${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
@@ -121,7 +121,7 @@ steps:
     password:
       from_secret: docker_password
     repo: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
-    cache_from: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
+    cache_from: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}
     dockerfile: ${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}.Dockerfile
     build_args:
       - ARCH=${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
