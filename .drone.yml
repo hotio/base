@@ -160,10 +160,6 @@ steps:
       - linux/arm64
 
 - name: branch
-  when:
-    branch:
-      exclude:
-        - master
   image: plugins/manifest
   pull: always
   settings:
