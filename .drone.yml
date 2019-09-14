@@ -140,7 +140,7 @@ trigger:
     - push
 
 steps:
-- name: master
+- name: latest
   when:
     branch:
       - master
