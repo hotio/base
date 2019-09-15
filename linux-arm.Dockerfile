@@ -18,7 +18,11 @@ RUN mkdir "${APP_DIR}" && \
     useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
     usermod -G users hotio
 
-COPY root/ /
+# https://github.com/just-containers/s6-overlay/releases
+# https://github.com/ncw/rclone/releases
+# https://github.com/hasse69/rar2fs/releases
+# https://www.rarlab.com/rar_add.htm
+ENV S6_VERSION=1.22.1.0 RCLONE_VERSION=1.49.2 RAR2FS_VERSION=1.27.2 UNRARSRC_VERSION=5.8.1
 
 # install packages
 RUN apt update && \
@@ -29,17 +33,13 @@ RUN apt update && \
 # generate locale
     locale-gen en_US.UTF-8 && \
 # install s6-overlay
-    version=$(sed -n '1p' /versions/s6-overlay) && \
-    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${version}/s6-overlay-arm.tar.gz" | tar xzf - -C / && \
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-arm.tar.gz" | tar xzf - -C / && \
 # install rclone
-    version=$(sed -n '1p' /versions/rclone) && \
-    curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v${version}/rclone-v${version}-linux-arm.deb" && dpkg --install "/tmp/rclone.deb" && \
+    curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-arm.deb" && dpkg --install "/tmp/rclone.deb" && \
 # install rar2fs
     tempdir="$(mktemp -d)" && \
-    version=$(sed -n '1p' /versions/rar2fs) && \
-    curl -fsSL "https://github.com/hasse69/rar2fs/archive/v${version}.tar.gz" | tar xzf - -C "${tempdir}" --strip-components=1 && \
-    version=$(sed -n '1p' /versions/unrarsrc) && \
-    curl -fsSL "https://www.rarlab.com/rar/unrarsrc-${version}.tar.gz" | tar xzf - -C "${tempdir}" && \
+    curl -fsSL "https://github.com/hasse69/rar2fs/archive/v${RAR2FS_VERSION}.tar.gz" | tar xzf - -C "${tempdir}" --strip-components=1 && \
+    curl -fsSL "https://www.rarlab.com/rar/unrarsrc-${UNRARSRC_VERSION}.tar.gz" | tar xzf - -C "${tempdir}" && \
     cd "${tempdir}/unrar" && \
     make lib && make install-lib && \
     cd "${tempdir}" && \
