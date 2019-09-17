@@ -19,21 +19,21 @@ steps:
       from_secret: docker_password
     DOCKERHUB_REPOSITORY: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
 
----
-kind: pipeline
-name: checks
+# ---
+# kind: pipeline
+# name: checks
 
-trigger:
-  event:
-    - push
+# trigger:
+#   event:
+#     - push
 
-steps:
-- name: shellcheck
-  image: koalaman/shellcheck-alpine
-  pull: always
-  commands:
-    - shellcheck --version
-    - for file in $(find ./root -type f -not -path "*versions*"); do echo $file; shellcheck $file; done;
+# steps:
+# - name: shellcheck
+#   image: koalaman/shellcheck-alpine
+#   pull: always
+#   commands:
+#     - shellcheck --version
+#     - for file in $(find ./root -type f); do echo $file; shellcheck $file; done;
 
 ---
 kind: pipeline
@@ -175,39 +175,55 @@ steps:
       - linux/arm
       - linux/arm64
 
+- name: branch-commit
+  image: plugins/manifest
+  pull: always
+  settings:
+    ignore_missing: true
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    target: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}
+    template: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-OS-ARCH
+    platforms:
+      - linux/amd64
+      - linux/arm
+      - linux/arm64
+
 depends_on:
   - linux-amd64
   - linux-arm64
   - linux-arm
 
----
-kind: pipeline
-name: downstream
+# ---
+# kind: pipeline
+# name: downstream
 
-trigger:
-  branch:
-    - master
+# trigger:
+#   branch:
+#     - master
 
-steps:
-- name: trigger
-  image: plugins/downstream
-  settings:
-    server: https://cloud.drone.io
-    token:
-      from_secret: drone_token
-    fork: true
-    repositories:
-      - ${DRONE_REPO_OWNER}/docker-mono@master
-      - ${DRONE_REPO_OWNER}/docker-dotnetcore@master
-      - ${DRONE_REPO_OWNER}/docker-apcupsd2influxdb@master
-      - ${DRONE_REPO_OWNER}/docker-bazarr@master
-      - ${DRONE_REPO_OWNER}/docker-cloudflare-ddns@master
-      - ${DRONE_REPO_OWNER}/docker-hddtemp2influxdb@master
-      - ${DRONE_REPO_OWNER}/docker-nzbget@master
-      - ${DRONE_REPO_OWNER}/docker-nzbhydra2@master
-      - ${DRONE_REPO_OWNER}/docker-restic@master
-      - ${DRONE_REPO_OWNER}/docker-sabnzbd@master
-      - ${DRONE_REPO_OWNER}/docker-tautulli@master
+# steps:
+# - name: trigger
+#   image: plugins/downstream
+#   settings:
+#     server: https://cloud.drone.io
+#     token:
+#       from_secret: drone_token
+#     fork: true
+#     repositories:
+#       - ${DRONE_REPO_OWNER}/docker-mono@master
+#       - ${DRONE_REPO_OWNER}/docker-dotnetcore@master
+#       - ${DRONE_REPO_OWNER}/docker-apcupsd2influxdb@master
+#       - ${DRONE_REPO_OWNER}/docker-bazarr@master
+#       - ${DRONE_REPO_OWNER}/docker-cloudflare-ddns@master
+#       - ${DRONE_REPO_OWNER}/docker-hddtemp2influxdb@master
+#       - ${DRONE_REPO_OWNER}/docker-nzbget@master
+#       - ${DRONE_REPO_OWNER}/docker-nzbhydra2@master
+#       - ${DRONE_REPO_OWNER}/docker-restic@master
+#       - ${DRONE_REPO_OWNER}/docker-sabnzbd@master
+#       - ${DRONE_REPO_OWNER}/docker-tautulli@master
 
-depends_on:
-  - manifest
+# depends_on:
+#   - manifest
