@@ -22,7 +22,7 @@ RUN mkdir "${APP_DIR}" && \
 # https://github.com/ncw/rclone/releases
 # https://github.com/hasse69/rar2fs/releases
 # https://www.rarlab.com/rar_add.htm
-ENV S6_VERSION=1.22.1.0 RCLONE_VERSION=1.49.2 RAR2FS_VERSION=1.27.2 UNRARSRC_VERSION=5.8.1
+ENV S6_VERSION=1.22.1.0 RCLONE_VERSION=1.49.4 RAR2FS_VERSION=1.27.2 UNRARSRC_VERSION=5.8.2
 
 # install packages
 RUN apt update && \
