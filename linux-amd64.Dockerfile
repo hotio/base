@@ -18,9 +18,6 @@ RUN mkdir "${APP_DIR}" && \
     useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
     usermod -G users hotio
 
-# https://github.com/just-containers/s6-overlay/releases
-ENV S6_VERSION=1.22.1.0
-
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
@@ -28,9 +25,13 @@ RUN apt update && \
         locales tzdata && \
 # generate locale
     locale-gen en_US.UTF-8 && \
-# install s6-overlay
-    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-amd64.tar.gz" | tar xzf - -C / && \
 # clean up
     apt autoremove -y && \
     apt clean && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
+
+# https://github.com/just-containers/s6-overlay/releases
+ENV S6_VERSION=1.22.1.0
+
+# install s6-overlay
+RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-amd64.tar.gz" | tar xzf - -C /
