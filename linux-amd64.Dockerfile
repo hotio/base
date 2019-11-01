@@ -20,15 +20,12 @@ RUN mkdir "${APP_DIR}" && \
 
 # https://github.com/just-containers/s6-overlay/releases
 # https://github.com/ncw/rclone/releases
-# https://github.com/hasse69/rar2fs/releases
-# https://www.rarlab.com/rar_add.htm
-ENV S6_VERSION=1.22.1.0 RCLONE_VERSION=1.50.0 RAR2FS_VERSION=1.27.2 UNRARSRC_VERSION=5.8.3
+ENV S6_VERSION=1.22.1.0 RCLONE_VERSION=1.50.0
 
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
         ca-certificates jq unzip curl fuse python \
-        libfuse-dev autoconf automake build-essential \
         locales tzdata && \
 # generate locale
     locale-gen en_US.UTF-8 && \
@@ -36,19 +33,7 @@ RUN apt update && \
     curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-amd64.tar.gz" | tar xzf - -C / && \
 # install rclone
     curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.deb" && dpkg --install "/tmp/rclone.deb" && \
-# install rar2fs
-    tempdir="$(mktemp -d)" && \
-    curl -fsSL "https://github.com/hasse69/rar2fs/archive/v${RAR2FS_VERSION}.tar.gz" | tar xzf - -C "${tempdir}" --strip-components=1 && \
-    curl -fsSL "https://www.rarlab.com/rar/unrarsrc-${UNRARSRC_VERSION}.tar.gz" | tar xzf - -C "${tempdir}" && \
-    cd "${tempdir}/unrar" && \
-    make lib && make install-lib && \
-    cd "${tempdir}" && \
-    autoreconf -f -i && \
-    ./configure && make && make install && \
-    cd ~ && \
-    rm -rf "${tempdir}" && \
 # clean up
-    apt purge -y libfuse-dev autoconf automake build-essential && \
     apt autoremove -y && \
     apt clean && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
