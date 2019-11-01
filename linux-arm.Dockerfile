@@ -19,20 +19,17 @@ RUN mkdir "${APP_DIR}" && \
     usermod -G users hotio
 
 # https://github.com/just-containers/s6-overlay/releases
-# https://github.com/ncw/rclone/releases
-ENV S6_VERSION=1.22.1.0 RCLONE_VERSION=1.50.0
+ENV S6_VERSION=1.22.1.0
 
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
-        ca-certificates jq unzip curl fuse python \
+        ca-certificates jq unzip curl python \
         locales tzdata && \
 # generate locale
     locale-gen en_US.UTF-8 && \
 # install s6-overlay
     curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-arm.tar.gz" | tar xzf - -C / && \
-# install rclone
-    curl -fsSL -o "/tmp/rclone.deb" "https://github.com/ncw/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-arm.deb" && dpkg --install "/tmp/rclone.deb" && \
 # clean up
     apt autoremove -y && \
     apt clean && \
