@@ -1,42 +1,5 @@
 ---
 kind: pipeline
-name: dockerhub-description
-
-trigger:
-  event:
-    - push
-  branch:
-    - master
-
-steps:
-- name: update
-  image: peterevans/dockerhub-description:2.0.0
-  pull: always
-  environment:
-    DOCKERHUB_USERNAME:
-      from_secret: docker_username
-    DOCKERHUB_PASSWORD:
-      from_secret: docker_password
-    DOCKERHUB_REPOSITORY: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}
-
-# ---
-# kind: pipeline
-# name: checks
-
-# trigger:
-#   event:
-#     - push
-
-# steps:
-# - name: shellcheck
-#   image: koalaman/shellcheck-alpine
-#   pull: always
-#   commands:
-#     - shellcheck --version
-#     - for file in $(find ./root -type f); do echo $file; shellcheck $file; done;
-
----
-kind: pipeline
 name: linux-amd64
 
 platform:
@@ -63,9 +26,6 @@ steps:
       - ARCH=${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
     tags:
       - ${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
-
-# depends_on:
-#   - checks
 
 ---
 kind: pipeline
@@ -96,9 +56,6 @@ steps:
     tags:
       - ${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
 
-# depends_on:
-#   - checks
-
 ---
 kind: pipeline
 name: linux-arm
@@ -127,9 +84,6 @@ steps:
       - ARCH=${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
     tags:
       - ${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
-
-# depends_on:
-#   - checks
 
 ---
 kind: pipeline
