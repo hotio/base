@@ -97,7 +97,7 @@ steps:
 - name: latest
   when:
     branch:
-      - master
+      - stable
   image: plugins/manifest
   pull: always
   settings:
