@@ -157,9 +157,6 @@ depends_on:
 kind: pipeline
 name: discord
 
-clone:
-  disable: true
-
 trigger:
   status:
   - success
@@ -175,8 +172,7 @@ steps:
     DISCORD_TOKEN:
       from_secret: discord_token
   commands:
-    - [[ "${DRONE_BUILD_STATUS}" == "success" ]] && curl -fsSL -H "Content-Type: application/json" -X POST -d '{"embeds":[{"description":"Build [#'"${DRONE_BUILD_NUMBER}"'](https://cloud.drone.io/'"${DRONE_REPO}"'/'"${DRONE_BUILD_NUMBER}"') of `'"${DRONE_REPO}"':'"${DRONE_COMMIT_BRANCH}"'` succeeded.\n\nCommit ['"${DRONE_COMMIT_SHA:0:7}"']('"${DRONE_COMMIT_LINK}"') by '"${DRONE_COMMIT_AUTHOR}"':\n``` '"${DRONE_COMMIT_MESSAGE}"' ```","color":65280}]}' https://discordapp.com/api/webhooks/${DISCORD_ID}/${DISCORD_TOKEN}
-    - [[ "${DRONE_BUILD_STATUS}" == "failure" ]] && curl -fsSL -H "Content-Type: application/json" -X POST -d '{"embeds":[{"description":"Build [#'"${DRONE_BUILD_NUMBER}"'](https://cloud.drone.io/'"${DRONE_REPO}"'/'"${DRONE_BUILD_NUMBER}"') of `'"${DRONE_REPO}"':'"${DRONE_COMMIT_BRANCH}"'` failed.\n\nCommit ['"${DRONE_COMMIT_SHA:0:7}"']('"${DRONE_COMMIT_LINK}"') by '"${DRONE_COMMIT_AUTHOR}"':\n``` '"${DRONE_COMMIT_MESSAGE}"' ```","color":16711680}]}' https://discordapp.com/api/webhooks/${DISCORD_ID}/${DISCORD_TOKEN}
+    - bash discord.sh
 
 depends_on:
   - manifest
