@@ -180,9 +180,9 @@ steps:
         Author {{build.author}}
       {{else}}
         Build <{{build.number}}|{{build.link}}> for <{{repo.owner}}/{{repo.name}}:{{build.branch}}|https://github.com/{{repo.owner}}/{{repo.name}}/tree/{{build.branch}}> failed!
-        Commit: <{{build.message}}|https://github.com/{{repo.owner}}/{{repo.name}}/commit/{{build.commit}}>
-        Commit SHA: {{build.commit}}
-        Author: {{build.author}}
+        Commit <{{build.message}}|https://github.com/{{repo.owner}}/{{repo.name}}/commit/{{build.commit}}>
+        Commit SHA {{build.commit}}
+        Author {{build.author}}
       {{/success}}
 
 depends_on:
