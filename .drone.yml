@@ -172,18 +172,6 @@ steps:
       from_secret: discord_id
     webhook_token:
       from_secret: discord_token
-    message: >
-      {{#success build.status}}
-        Build <{{build.number}}|{{build.link}}> for {{repo.owner}}/{{repo.name}}:{{build.branch}} succeeded.
-        Commit {{build.message}}
-        Commit SHA {{build.commit}}
-        Author {{build.author}}
-      {{else}}
-        Build <{{build.number}}|{{build.link}}> for <{{repo.owner}}/{{repo.name}}:{{build.branch}} failed!
-        Commit {{build.message}}
-        Commit SHA {{build.commit}}
-        Author {{build.author}}
-      {{/success}}
 
 depends_on:
   - manifest
