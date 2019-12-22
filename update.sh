@@ -1,8 +1,10 @@
 #!/bin/bash
 
-if [[ ${1} == "checkpackages" ]]; then
-    docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-    docker run --rm -v "${GITHUB_WORKSPACE}":/github -t arm64v8/ubuntu:18.04 bash -c 'apt list --installed > /github/upstream_packages.arm64.txt'
-    docker run --rm -v "${GITHUB_WORKSPACE}":/github -t arm32v7/ubuntu:18.04 bash -c 'apt list --installed > /github/upstream_packages.arm.txt'
-    docker run --rm -v "${GITHUB_WORKSPACE}":/github -t   amd64/ubuntu:18.04 bash -c 'apt list --installed > /github/upstream_packages.amd64.txt'
+if [[ ${1} == "checkdigests" ]]; then
+    docker pull arm64v8/ubuntu:18.04
+    docker pull arm32v7/ubuntu:18.04
+    docker pull   amd64/ubuntu:18.04
+    docker inspect --format='{{index .RepoDigests 0}}' arm64v8/ubuntu:18.04 >  upstream_digests.txt
+    docker inspect --format='{{index .RepoDigests 0}}' arm32v7/ubuntu:18.04 >> upstream_digests.txt
+    docker inspect --format='{{index .RepoDigests 0}}'   amd64/ubuntu:18.04 >> upstream_digests.txt
 fi
