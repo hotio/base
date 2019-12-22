@@ -1,7 +1,7 @@
 name: Upstream packages check
 on:
   schedule:
-    - cron:  '*/5 * * * *'
+    - cron:  '0 * * * *'
 
 jobs:
   update:
