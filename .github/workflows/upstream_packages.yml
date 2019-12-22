@@ -1,0 +1,28 @@
+name: Upstream packages check
+on:
+  schedule:
+    - cron:  '*/5 * * * *'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        branch: [stable]
+    steps:
+    - uses: actions/checkout@master
+      with:
+        ref: ${{ matrix.branch }}
+    - name: Check for updated packages
+      run: |
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+        docker run --rm -t -v "${PWD}":"/github/workspace" arm64v8/ubuntu:18.04 apt list --installed > /github/workspace/upstream_packages.arm64.txt
+        docker run --rm -t -v "${PWD}":"/github/workspace" arm32v7/ubuntu:18.04 apt list --installed > /github/workspace/upstream_packages.arm.txt
+        docker run --rm -t -v "${PWD}":"/github/workspace"   amd64/ubuntu:18.04 apt list --installed > /github/workspace/upstream_packages.amd64.txt
+    - name: Commit and push changes
+      uses: stefanzweifel/git-auto-commit-action@v2.5.0
+      with:
+        commit_message: ${{ "Upstream packages have been updated" }}
+        branch: ${{ matrix.branch }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
