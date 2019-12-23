@@ -1,7 +1,5 @@
 name: Upstream digests check
-on:
-  schedule:
-    - cron:  '0 * * * *'
+on: push
 
 jobs:
   update:
