@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ ${1} == "checkdigests" ]]; then
-    echo '{"experimental": "enabled"}' > ~/.docker/config.json
+    mkdir ~/.docker && echo '{"experimental": "enabled"}' > ~/.docker/config.json
     image="ubuntu"
     tag="18.04"
     manifest=$(docker manifest inspect ${image}:${tag})
