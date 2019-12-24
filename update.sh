@@ -1,7 +1,12 @@
 #!/bin/bash
 
 if [[ ${1} == "checkdigests" ]]; then
-    image="amd64/ubuntu:18.04"   && docker pull ${image} && digest=$(docker inspect --format='{{index .RepoDigests 0}}' ${image}) && sed -i "s#FROM .*\$#FROM ${digest}#g" ./linux-amd64.Dockerfile
-    image="arm32v7/ubuntu:18.04" && docker pull ${image} && digest=$(docker inspect --format='{{index .RepoDigests 0}}' ${image}) && sed -i "s#FROM .*\$#FROM ${digest}#g" ./linux-arm.Dockerfile
-    image="arm64v8/ubuntu:18.04" && docker pull ${image} && digest=$(docker inspect --format='{{index .RepoDigests 0}}' ${image}) && sed -i "s#FROM .*\$#FROM ${digest}#g" ./linux-arm64.Dockerfile
+    echo '{"experimental": "enabled"}' > ~/.docker/config.json
+    image="ubuntu"
+    tag="18.04"
+    manifest=$(docker manifest inspect ${image}:${tag})
+    [[ -z ${manifest} ]] && exit 1
+    digest=$(echo "${manifest}" | jq -r '.manifests[] | select (.platform.architecture == "amd64" and .platform.os == "linux").digest') && sed -i "s#FROM .*\$#FROM ${image}@${digest}#g" ./linux-amd64.Dockerfile && echo "${digest}"
+    digest=$(echo "${manifest}" | jq -r '.manifests[] | select (.platform.architecture == "arm" and .platform.os == "linux").digest')   && sed -i "s#FROM .*\$#FROM ${image}@${digest}#g" ./linux-arm.Dockerfile   && echo "${digest}"
+    digest=$(echo "${manifest}" | jq -r '.manifests[] | select (.platform.architecture == "arm64" and .platform.os == "linux").digest') && sed -i "s#FROM .*\$#FROM ${image}@${digest}#g" ./linux-arm64.Dockerfile && echo "${digest}"
 fi
