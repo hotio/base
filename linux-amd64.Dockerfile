@@ -1,4 +1,4 @@
-FROM ubuntu@sha256:2695d3e10e69cc500a16eae6d6629c803c43ab075fa5ce60813a0fc49c47e859
+FROM ubuntu:focal
 LABEL maintainer="hotio"
 
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -34,4 +34,7 @@ RUN apt update && \
 ARG S6_VERSION=1.22.1.0
 
 # install s6-overlay
-RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-amd64.tar.gz" | tar xzf - -C /
+RUN file="/tmp/s6-overlay.tar.gz" && curl -fsSL -o "${file}" "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-amd64.tar.gz" && \
+    tar xzf "${file}" -C / --exclude="./bin" && \
+    tar xzf "${file}" -C /usr ./bin && \
+    rm "${file}"
