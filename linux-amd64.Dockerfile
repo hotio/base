@@ -1,4 +1,4 @@
-FROM ubuntu:focal
+FROM ubuntu@sha256:9c2b5e9c6bc05e63875f68a4295af49399c9ea7bfc6908b2880c1380b44e2fc1
 LABEL maintainer="hotio"
 
 ARG DEBIAN_FRONTEND="noninteractive"
