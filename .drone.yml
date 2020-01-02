@@ -29,6 +29,28 @@ steps:
 
 ---
 kind: pipeline
+name: linux-amd64-test
+
+platform:
+  os: linux
+  arch: amd64
+
+trigger:
+  event:
+    - push
+
+steps:
+- name: list-packages
+  image: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
+  pull: always
+  commands:
+    - apt list --installed
+
+depends_on:
+  - linux-amd64
+
+---
+kind: pipeline
 name: linux-arm64
 
 platform:
@@ -58,6 +80,28 @@ steps:
 
 ---
 kind: pipeline
+name: linux-arm64-test
+
+platform:
+  os: linux
+  arch: arm64
+
+trigger:
+  event:
+    - push
+
+steps:
+- name: list-packages
+  image: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
+  pull: always
+  commands:
+    - apt list --installed
+
+depends_on:
+  - linux-arm64
+
+---
+kind: pipeline
 name: linux-arm
 
 platform:
@@ -84,6 +128,28 @@ steps:
       - ARCH=${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
     tags:
       - ${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
+
+---
+kind: pipeline
+name: linux-arm-test
+
+platform:
+  os: linux
+  arch: arm
+
+trigger:
+  event:
+    - push
+
+steps:
+- name: list-packages
+  image: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-${DRONE_STAGE_OS}-${DRONE_STAGE_ARCH}
+  pull: always
+  commands:
+    - apt list --installed
+
+depends_on:
+  - linux-arm
 
 ---
 kind: pipeline
@@ -149,9 +215,9 @@ steps:
       - linux/arm64
 
 depends_on:
-  - linux-amd64
-  - linux-arm64
-  - linux-arm
+  - linux-amd64-test
+  - linux-arm64-test
+  - linux-arm-test
 
 ---
 kind: pipeline
