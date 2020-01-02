@@ -21,7 +21,7 @@ RUN mkdir "${APP_DIR}" && \
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
-        ca-certificates jq unzip curl unrar \
+        ca-certificates jq curl unzip p7zip-full unrar \
         locales tzdata && \
 # generate locale
     locale-gen en_US.UTF-8 && \
