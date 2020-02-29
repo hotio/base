@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        branch: [stable, focal]
+        branch: [stable, focal, eoan]
     steps:
     - uses: actions/checkout@master
       with:
