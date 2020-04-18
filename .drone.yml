@@ -163,25 +163,6 @@ trigger:
     - push
 
 steps:
-- name: latest
-  when:
-    branch:
-      - stable
-  image: plugins/manifest
-  pull: always
-  settings:
-    ignore_missing: false
-    username:
-      from_secret: docker_username
-    password:
-      from_secret: docker_password
-    target: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:latest
-    template: ${DRONE_REPO_OWNER}/${DRONE_REPO_NAME##docker-}:${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:7}-${DRONE_BUILD_NUMBER}-OS-ARCH
-    platforms:
-      - linux/amd64
-      - linux/arm
-      - linux/arm64
-
 - name: branch
   image: plugins/manifest
   pull: always
