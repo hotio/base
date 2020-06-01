@@ -24,7 +24,4 @@ RUN mkdir "${APP_DIR}" && \
 ARG S6_VERSION=2.0.0.1
 
 # install s6-overlay
-RUN file="/tmp/s6-overlay.tar.gz" && curl -fsSL -o "${file}" "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-amd64.tar.gz" && \
-    tar xzf "${file}" -C / --exclude="./bin" && \
-    tar xzf "${file}" -C /usr ./bin && \
-    rm "${file}"
+RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-amd64.tar.gz" | tar xzf - -C /
