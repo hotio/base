@@ -12,7 +12,7 @@ VOLUME ["${CONFIG_DIR}"]
 ENTRYPOINT ["/init"]
 
 # install packages
-RUN apk add --no-cache tzdata shadow bash curl
+RUN apk add --no-cache tzdata shadow bash curl jq
 
 # make folders
 RUN mkdir "${APP_DIR}" && \
