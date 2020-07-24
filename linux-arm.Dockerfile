@@ -1,4 +1,4 @@
-FROM ubuntu@sha256:7ec8bcd4abd31f16afa768d99197777d68630dd04e36502b90211c30660fb2ed
+FROM ubuntu@sha256:6701deddfa3bdabb3a50eb0a24175367b9c7b145e8b2f889ee3b2c52a295ec0a
 LABEL maintainer="hotio"
 
 ARG DEBIAN_FRONTEND="noninteractive"
