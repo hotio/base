@@ -21,4 +21,4 @@ jobs:
       with:
         commit_message: Upstream digests have changed
         branch: ${{ matrix.branch }}
-        token: ${{ secrets.PERSONAL_TOKEN }}
+
