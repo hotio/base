@@ -28,7 +28,7 @@ jobs:
             --cache-from "hotio/base:actions-cache" \
             --cache-to "hotio/base:actions-cache" \
             --platform linux/arm/v7 \
-            --output "type=image,push=false" \
+            --output "type=image,push=true" \
             --tag hotio/base:actions \
             --file ./linux-arm.Dockerfile ./
       -
