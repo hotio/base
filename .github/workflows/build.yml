@@ -46,6 +46,7 @@ jobs:
           rm -f ${HOME}/.docker/config.json
 
   manifest:
+    runs-on: ubuntu-latest
     needs: [buildx]
     steps:
       -
