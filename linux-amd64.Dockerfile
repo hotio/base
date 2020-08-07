@@ -1,8 +1,4 @@
 FROM alpine@sha256:a15790640a6690aa1730c38cf0a440e2aa44aaca9b0e8931a9f2b0d7cc90fd65
-LABEL maintainer="hotio"
-
-ARG ARCH
-ENV ARCH="${ARCH}"
 
 ENV APP_DIR="/app" CONFIG_DIR="/config" PUID="1000" PGID="1000" UMASK="002" TZ="Etc/UTC" ARGS="" DEBUG="no"
 ENV XDG_CONFIG_HOME="${CONFIG_DIR}/.config" XDG_CACHE_HOME="${CONFIG_DIR}/.cache" XDG_DATA_HOME="${CONFIG_DIR}/.local/share" LANG="C.UTF-8" LC_ALL="C.UTF-8"
@@ -25,3 +21,18 @@ ARG S6_VERSION=2.0.0.1
 
 # install s6-overlay
 RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-amd64.tar.gz" | tar xzf - -C /
+
+ARG LABEL_CREATED
+LABEL org.opencontainers.image.created=$LABEL_CREATED
+ARG LABEL_TITLE
+LABEL org.opencontainers.image.title=$LABEL_TITLE
+ARG LABEL_REVISION
+LABEL org.opencontainers.image.revision=$LABEL_REVISION
+ARG LABEL_SOURCE
+LABEL org.opencontainers.image.source=$LABEL_SOURCE
+ARG LABEL_VENDOR
+LABEL org.opencontainers.image.vendor=$LABEL_VENDOR
+ARG LABEL_URL
+LABEL org.opencontainers.image.url=$LABEL_URL
+ARG LABEL_VERSION
+LABEL org.opencontainers.image.version=$LABEL_VERSION
