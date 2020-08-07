@@ -4,7 +4,7 @@ on: push
 
 jobs:
   buildx:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         architecture: [linux-arm-v7, linux-arm64, linux-amd64]
@@ -18,7 +18,7 @@ jobs:
       -
         name: Docker Login
         env:
-          DOCKER_USERNAME: hotio
+          DOCKER_USERNAME: ${GITHUB_REPOSITORY%/*}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASS }}
         run: |
           echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
@@ -40,8 +40,8 @@ jobs:
           docker run --rm --entrypoint="" ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-${{ matrix.architecture }} \
             apt list --installed
   
-  manifest:
-    runs-on: ubuntu-latest
+  publish:
+    runs-on: ubuntu-20.04
     needs: [buildx]
     steps:
       -
@@ -51,7 +51,7 @@ jobs:
       -
         name: Docker Login
         env:
-          DOCKER_USERNAME: hotio
+          DOCKER_USERNAME: ${GITHUB_REPOSITORY%/*}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASS }}
         run: |
           echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
@@ -67,3 +67,10 @@ jobs:
         name: Docker Check Manifest
         run: |
           docker manifest inspect ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}
+      -
+        name: Send discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          curl -fsSL https://gist.githubusercontent.com/${GITHUB_REPOSITORY%/*}/3d98159d47e0bf5eccbff221f1288472/raw/discord-action-notify.sh > discord-action-notify.sh
+          bash discord-action-notify.sh
