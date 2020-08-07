@@ -27,8 +27,7 @@ jobs:
         name: Docker Buildx (build)
         run: |
           docker buildx build \
-            --cache-from "type=local,src=/tmp/.buildx-cache" \
-            --cache-to "type=local,dest=/tmp/.buildx-cache" \
+            --cache-from "hotio/base:actions" \
             --platform linux/arm/v7 \
             --output "type=image,push=false" \
             --tag hotio/base:actions \
