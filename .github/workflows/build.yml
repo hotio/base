@@ -18,7 +18,7 @@ jobs:
       -
         name: Docker Login
         env:
-          DOCKER_USERNAME: ${GITHUB_REPOSITORY%/*}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASS }}
         run: |
           echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
@@ -51,7 +51,7 @@ jobs:
       -
         name: Docker Login
         env:
-          DOCKER_USERNAME: ${GITHUB_REPOSITORY%/*}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASS }}
         run: |
           echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
