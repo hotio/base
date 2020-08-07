@@ -68,7 +68,14 @@ jobs:
         run: |
           docker manifest inspect ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}
       -
+        name: Take screenshot
+        env:
+          VERSION_FIELD: ""
+        run: |
+          docker run --rm --user root -v "${GITHUB_WORKSPACE}":"${GITHUB_WORKSPACE}" --workdir "${GITHUB_WORKSPACE}" zenika/alpine-chrome:with-puppeteer apk add --no-cache curl iputils bash coreutils && bash update.sh checkservice && bash update.sh screenshot
+      -
         name: Send discord notification
+        if: always()
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
