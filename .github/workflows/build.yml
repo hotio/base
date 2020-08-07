@@ -33,17 +33,12 @@ jobs:
             --cache-to "${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-cache" \
             --platform ${ARCHITECTURE//-/\/} \
             --output "type=image,push=true" \
-            --tag ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA}-${GITHUB_RUN_NUMBER}-${ARCHITECTURE} \
+            --tag ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-${ARCHITECTURE} \
             --file ./${ARCHITECTURE}.Dockerfile ./
       -
         name: Docker Check Manifest
         run: |
-          docker run --rm mplatform/mquery ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA}-${GITHUB_RUN_NUMBER}-${ARCHITECTURE}
-      -
-        name: Clear
-        if: always()
-        run: |
-          rm -f ${HOME}/.docker/config.json
+          docker run --rm mplatform/mquery ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-${{ matrix.architecture }}
 
   manifest:
     runs-on: ubuntu-latest
