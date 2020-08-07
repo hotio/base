@@ -7,6 +7,9 @@ on:
 jobs:
   buildx:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        architecture: [linux-arm-v7, linux-arm64, linux-amd64]
     steps:
       -
         name: Checkout
@@ -22,21 +25,29 @@ jobs:
         run: |
           echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
       -
-        name: Docker Buildx (build)
+        name: Docker Buildx
         run: |
+          ARCHITECTURE=${{ matrix.branch }}
           docker buildx build \
-            --cache-from "hotio/base:actions-cache" \
-            --cache-to "hotio/base:actions-cache" \
-            --platform linux/arm/v7 \
+            --cache-from "${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-cache" \
+            --cache-to "${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-cache" \
+            --platform ${ARCHITECTURE//-/\/} \
             --output "type=image,push=true" \
-            --tag hotio/base:actions \
-            --file ./linux-arm.Dockerfile ./
+            --tag ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA}-${GITHUB_RUN_NUMBER}-${ARCHITECTURE} \
+            --file ./${ARCHITECTURE}.Dockerfile ./
       -
         name: Docker Check Manifest
         run: |
-          docker run --rm mplatform/mquery hotio/base:actions
+          docker run --rm mplatform/mquery ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA}-${GITHUB_RUN_NUMBER}-${ARCHITECTURE}
       -
         name: Clear
         if: always()
         run: |
           rm -f ${HOME}/.docker/config.json
+
+  manifest:
+    needs: [buildx]
+    steps:
+      -
+        run: |
+          echo "Test Job"
