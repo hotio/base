@@ -16,7 +16,7 @@ jobs:
       - name: Shellcheck
         run: |
           shellcheck --version
-          find "${GITHUB_WORKSPACE}/root" -type f -exec shellcheck {} \;
+          [[ -d ./root ]] && find "./root" -type f -exec shellcheck {} \;
 
       - name: Set up Docker Buildx
         uses: crazy-max/ghaction-docker-buildx@v3
