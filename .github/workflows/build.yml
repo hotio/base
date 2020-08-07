@@ -15,14 +15,12 @@ jobs:
         name: Set up Docker Buildx
         uses: crazy-max/ghaction-docker-buildx@v3
       -
-        name: Cache Docker layers
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+        name: Docker Login
+        env:
+          DOCKER_USERNAME: hotio
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASS }}
+        run: |
+          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
       -
         name: Docker Buildx (build)
         run: |
@@ -31,22 +29,6 @@ jobs:
             --cache-to "hotio/base:actions-cache" \
             --platform linux/arm/v7 \
             --output "type=image,push=false" \
-            --tag hotio/base:actions \
-            --file ./linux-arm.Dockerfile ./
-      -
-        name: Docker Login
-        env:
-          DOCKER_USERNAME: hotio
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASS }}
-        run: |
-          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
-      -
-        name: Docker Buildx (push)
-        run: |
-          docker buildx build \
-            --cache-from "hotio/base:actions-cache" \
-            --platform linux/arm/v7 \
-            --output "type=image,push=true" \
             --tag hotio/base:actions \
             --file ./linux-arm.Dockerfile ./
       -
