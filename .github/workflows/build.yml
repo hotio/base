@@ -72,5 +72,5 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          curl -fsSL https://gist.githubusercontent.com/${GITHUB_REPOSITORY%/*}/3d98159d47e0bf5eccbff221f1288472/raw/discord-action-notify.sh > discord-action-notify.sh
+          curl -fsSL https://gist.githubusercontent.com/hotio/3d98159d47e0bf5eccbff221f1288472/raw/discord-action-notify.sh > discord-action-notify.sh
           bash discord-action-notify.sh
