@@ -48,5 +48,3 @@ ARG LABEL_VENDOR
 LABEL org.opencontainers.image.vendor=$LABEL_VENDOR
 ARG LABEL_URL
 LABEL org.opencontainers.image.url=$LABEL_URL
-ARG LABEL_VERSION
-LABEL org.opencontainers.image.version=$LABEL_VERSION
