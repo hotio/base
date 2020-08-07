@@ -36,10 +36,10 @@ jobs:
             --tag ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-${ARCHITECTURE} \
             --file ./${ARCHITECTURE}.Dockerfile ./
       -
-        name: Docker Check Manifest
+        name: Test Image
         run: |
-          docker run --rm mplatform/mquery ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-${{ matrix.architecture }}
-
+          docker run --rm ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-${ARCHITECTURE} apt --list-installed
+  
   manifest:
     runs-on: ubuntu-latest
     needs: [buildx]
@@ -56,10 +56,14 @@ jobs:
         run: |
           echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
       -
-        name: Create manifest
+        name: Docker Create Manifest
         run: |
           docker manifest create ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//} \
             --amend ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-linux-amd64 \
             --amend ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-linux-arm-v7 \
             --amend ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-linux-arm64
           docker manifest push ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}
+      -
+        name: Docker Check Manifest
+        run: |
+          docker run --rm mplatform/mquery ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}
