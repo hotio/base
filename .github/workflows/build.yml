@@ -27,7 +27,7 @@ jobs:
       -
         name: Docker Buildx
         run: |
-          ARCHITECTURE=${{ matrix.branch }}
+          ARCHITECTURE=${{ matrix.architecture }}
           docker buildx build \
             --cache-from "${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-cache" \
             --cache-to "${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-cache" \
