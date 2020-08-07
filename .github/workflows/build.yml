@@ -16,7 +16,11 @@ jobs:
       - name: Shellcheck
         run: |
           shellcheck --version
-          [[ -d ./root ]] && find "./root" -type f -exec shellcheck {} \;
+          if [[ -d ./root ]]; then
+            find "./root" -type f -exec shellcheck {} \;
+          else
+            true
+          fi
 
       - name: Set up Docker Buildx
         uses: crazy-max/ghaction-docker-buildx@v3
