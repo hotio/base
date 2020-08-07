@@ -32,13 +32,13 @@ jobs:
             --platform ${ARCHITECTURE//-/\/} \
             --output "type=image,push=true" \
             --tag ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-${ARCHITECTURE} \
-            --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-            --label "org.opencontainers.image.title=${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}" \
-            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
-            --label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/${GITHUB_REF//refs\/heads\//}" \
-            --label "org.opencontainers.image.vendor=${GITHUB_REPOSITORY%/*}" \
-            --label "org.opencontainers.image.url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/master/README.md" \
-            --label "org.opencontainers.image.version=" \
+            --build-arg LABEL_CREATED="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --build-arg LABEL_TITLE="${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}" \
+            --build-arg LABEL_REVISION="${GITHUB_SHA}" \
+            --build-arg LABEL_SOURCE="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/${GITHUB_REF//refs\/heads\//}" \
+            --build-arg LABEL_VENDOR="${GITHUB_REPOSITORY%/*}" \
+            --build-arg LABEL_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/master/README.md" \
+            --build-arg LABEL_VERSION="" \
             --file ./${ARCHITECTURE}.Dockerfile ./
 
       - name: List installed packages
