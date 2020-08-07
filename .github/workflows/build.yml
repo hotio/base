@@ -29,8 +29,8 @@ jobs:
         run: |
           ARCHITECTURE=${{ matrix.architecture }}
           docker buildx build \
-            --cache-from "${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-cache" \
-            --cache-to "${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-cache" \
+            --cache-from "${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-cache-${ARCHITECTURE}" \
+            --cache-to "${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-cache-${ARCHITECTURE}" \
             --platform ${ARCHITECTURE//-/\/} \
             --output "type=image,push=true" \
             --tag ${GITHUB_REPOSITORY//docker-/}:${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}-${ARCHITECTURE} \
