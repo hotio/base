@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        branch: [bionic, eoan, focal, alpine]
+        branch: [bionic, focal, alpine]
     steps:
     - uses: actions/checkout@v2
       with:
@@ -22,4 +22,3 @@ jobs:
       with:
         commit_message: Upstream digests have changed
         branch: ${{ matrix.branch }}
-

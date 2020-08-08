@@ -9,7 +9,6 @@
 | Tag      | Description           | Build Status                                                                                      | Last Updated                                                                                       |
 | ---------|-----------------------|---------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
 | bionic   | Based on Ubuntu 18.04 | ![build](https://github.com/hotio/docker-base/workflows/build/badge.svg?branch=bionic&event=push) | ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/hotio/docker-base/bionic) |
-| eoan     | Based on Ubuntu 19.10 | ![build](https://github.com/hotio/docker-base/workflows/build/badge.svg?branch=eoan&event=push)   | ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/hotio/docker-base/eoan)   |
 | focal    | Based on Ubuntu 20.04 | ![build](https://github.com/hotio/docker-base/workflows/build/badge.svg?branch=focal&event=push)  | ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/hotio/docker-base/focal)  |
 | alpine   | Based on Alpine 3.12  | ![build](https://github.com/hotio/docker-base/workflows/build/badge.svg?branch=alpine&event=push) | ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/hotio/docker-base/alpine) |
 
