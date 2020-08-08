@@ -6,10 +6,10 @@
 
 ## Tags
 
-| Tag      | Description           | Build Status                                                                                      | Last Updated                                                                                       |
-| ---------|-----------------------|---------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| bionic   | Based on Ubuntu 18.04 | ![build](https://github.com/hotio/docker-base/workflows/build/badge.svg?branch=bionic&event=push) | ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/hotio/docker-base/bionic) |
-| focal    | Based on Ubuntu 20.04 | ![build](https://github.com/hotio/docker-base/workflows/build/badge.svg?branch=focal&event=push)  | ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/hotio/docker-base/focal)  |
-| alpine   | Based on Alpine 3.12  | ![build](https://github.com/hotio/docker-base/workflows/build/badge.svg?branch=alpine&event=push) | ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/hotio/docker-base/alpine) |
+| Tag      | Description           |
+| ---------|-----------------------|
+| bionic   | Based on Ubuntu 18.04 |
+| focal    | Based on Ubuntu 20.04 |
+| alpine   | Based on Alpine 3.12  |
 
 You can also find tags that reference a commit or version number.
