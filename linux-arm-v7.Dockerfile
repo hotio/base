@@ -22,6 +22,8 @@ ARG S6_VERSION=2.0.0.1
 # install s6-overlay
 RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-arm.tar.gz" | tar xzf - -C /
 
+ARG BUILD_ARCHITECTURE
+ENV BUILD_ARCHITECTURE=$BUILD_ARCHITECTURE
 ARG LABEL_CREATED
 LABEL org.opencontainers.image.created=$LABEL_CREATED
 ARG LABEL_TITLE
