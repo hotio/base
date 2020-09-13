@@ -113,8 +113,8 @@ jobs:
           IMAGE=${GITHUB_REPOSITORY//docker-/}
           TAG=${GITHUB_REF//refs\/heads\//}
           SOURCE=${IMAGE}:${TAG}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}
-          docker manifest create ${IMAGE}:${TAG}                                    --amend ${SOURCE}-linux-amd64 --amend ${SOURCE}-linux-arm-v7 --amend ${SOURCE}-linux-arm64 && docker manifest push ${IMAGE}:${TAG}
-          docker manifest create ${IMAGE}:${TAG}-${GITHUB_SHA:0:7}                  --amend ${SOURCE}-linux-amd64 --amend ${SOURCE}-linux-arm-v7 --amend ${SOURCE}-linux-arm64 && docker manifest push ${IMAGE}:${TAG}-${GITHUB_SHA:0:7}
+          docker manifest create ${IMAGE}:${TAG}                   --amend ${SOURCE}-linux-amd64 --amend ${SOURCE}-linux-arm-v7 --amend ${SOURCE}-linux-arm64 && docker manifest push ${IMAGE}:${TAG}
+          docker manifest create ${IMAGE}:${TAG}-${GITHUB_SHA:0:7} --amend ${SOURCE}-linux-amd64 --amend ${SOURCE}-linux-arm-v7 --amend ${SOURCE}-linux-arm64 && docker manifest push ${IMAGE}:${TAG}-${GITHUB_SHA:0:7}
 
       - name: Create manifests for GitHub Container Registry
         env:
@@ -123,8 +123,8 @@ jobs:
           IMAGE=ghcr.io/${GITHUB_REPOSITORY//docker-/}
           TAG=${GITHUB_REF//refs\/heads\//}
           SOURCE=${IMAGE}:${TAG}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}
-          docker manifest create ${IMAGE}:${TAG}                                    --amend ${SOURCE}-linux-amd64 --amend ${SOURCE}-linux-arm-v7 --amend ${SOURCE}-linux-arm64 && docker manifest push ${IMAGE}:${TAG}
-          docker manifest create ${IMAGE}:${TAG}-${GITHUB_SHA:0:7}                  --amend ${SOURCE}-linux-amd64 --amend ${SOURCE}-linux-arm-v7 --amend ${SOURCE}-linux-arm64 && docker manifest push ${IMAGE}:${TAG}-${GITHUB_SHA:0:7}
+          docker manifest create ${IMAGE}:${TAG}                   --amend ${SOURCE}-linux-amd64 --amend ${SOURCE}-linux-arm-v7 --amend ${SOURCE}-linux-arm64 && docker manifest push ${IMAGE}:${TAG}
+          docker manifest create ${IMAGE}:${TAG}-${GITHUB_SHA:0:7} --amend ${SOURCE}-linux-amd64 --amend ${SOURCE}-linux-arm-v7 --amend ${SOURCE}-linux-arm64 && docker manifest push ${IMAGE}:${TAG}-${GITHUB_SHA:0:7}
 
   notify:
     runs-on: ubuntu-20.04
