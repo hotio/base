@@ -28,7 +28,7 @@ RUN apt update && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
 
 # https://github.com/just-containers/s6-overlay/releases
-ARG S6_VERSION=1.22.1.0
+ARG S6_VERSION=2.1.0.0
 
 # install s6-overlay
 RUN file="/tmp/s6-overlay.tar.gz" && curl -fsSL -o "${file}" "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-amd64.tar.gz" && \
