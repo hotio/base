@@ -7,10 +7,10 @@
 
 ## Tags
 
-| Tag      | Description           |
-| ---------|-----------------------|
-| bionic   | Based on Ubuntu 18.04 |
-| focal    | Based on Ubuntu 20.04 |
-| alpine   | Based on Alpine 3.12  |
+| Tag        | Description           |
+| -----------|-----------------------|
+| `bionic`   | Based on Ubuntu 18.04 |
+| `focal`    | Based on Ubuntu 20.04 |
+| `alpine`   | Based on Alpine 3.12  |
 
 You can also find tags that reference a commit or version number.
