@@ -1,5 +1,3 @@
-# base
-
 [![GitHub](https://img.shields.io/badge/source-github-lightgrey)](https://github.com/hotio/docker-base)
 [![Docker Pulls](https://img.shields.io/docker/pulls/hotio/base)](https://hub.docker.com/r/hotio/base)
 [![GitHub Registry](https://img.shields.io/badge/registry-ghcr.io-blue)](https://github.com/users/hotio/packages/container/package/base)
