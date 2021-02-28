@@ -17,7 +17,7 @@ RUN mkdir "${APP_DIR}" && \
     usermod -G users hotio
 
 # https://github.com/just-containers/s6-overlay/releases
-ARG S6_VERSION=2.2.0.1
+ARG S6_VERSION=2.2.0.3
 
 # install s6-overlay
 RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-amd64.tar.gz" | tar xzf - -C /
