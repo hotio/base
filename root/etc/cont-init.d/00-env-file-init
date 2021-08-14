@@ -10,7 +10,7 @@ find /var/run/s6/container_environment/ -type f -name 'FILE__*' -print0 | while 
     fi
     SECRET=$(cat "${SECRET_FILE}")
     if [[ -n ${SECRET} ]]; then
-        echo "${SECRET}" > "${NEW_VAR}"
+        echo -n "${SECRET}" > "${NEW_VAR}"
         echo "[${NEW_VAR##*/}] Set with secret from \"${SECRET_FILE}\"."
     else
         echo "[${NEW_VAR##*/}] No secret found in \"${SECRET_FILE}\"!"
