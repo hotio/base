@@ -8,8 +8,7 @@ VOLUME ["${CONFIG_DIR}"]
 ENTRYPOINT ["/init"]
 
 # install packages
-RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unrar unzip p7zip ca-certificates && \
-    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing wget2
+RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unrar unzip p7zip ca-certificates
 
 # make folders
 RUN mkdir "${APP_DIR}" && \
