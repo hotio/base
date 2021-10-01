@@ -8,7 +8,7 @@ VOLUME ["${CONFIG_DIR}"]
 ENTRYPOINT ["/init"]
 
 # install packages
-RUN apk add --no-cache tzdata shadow bash curl jq grep sed coreutils findutils python3
+RUN apk add --no-cache tzdata shadow bash curl wget wget2 jq grep sed coreutils findutils python3 unrar unzip p7zip
 
 # make folders
 RUN mkdir "${APP_DIR}" && \
