@@ -9,7 +9,7 @@ ENTRYPOINT ["/init"]
 
 # install packages
 RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unzip p7zip ca-certificates && \
-    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/3.14/main unrar
+    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.14/main unrar
 
 # make folders
 RUN mkdir "${APP_DIR}" && \
