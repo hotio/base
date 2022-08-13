@@ -1,3 +1,26 @@
+FROM alpine AS builder
+
+ARG UNRAR_VER=6.1.7
+
+RUN apk --update --no-cache add \
+    autoconf \
+    automake \
+    binutils \
+    build-base \
+    cmake \
+    cppunit-dev \
+    curl-dev \
+    libtool \
+    linux-headers \
+    zlib-dev \
+# Install unrar from source
+&& cd /tmp \
+&& wget https://www.rarlab.com/rar/unrarsrc-${UNRAR_VER}.tar.gz -O /tmp/unrar.tar.gz \
+&& tar -xzf /tmp/unrar.tar.gz \
+&& cd unrar \
+&& make -f makefile \
+&& install -Dm 755 unrar /usr/bin/unrar
+
 FROM alpine@sha256:ed73e2bee79b3428995b16fce4221fc715a849152f364929cdccdc83db5f3d5c
 
 ENV APP_DIR="/app" CONFIG_DIR="/config" PUID="1000" PGID="1000" UMASK="002" TZ="Etc/UTC" ARGS=""
@@ -8,8 +31,9 @@ VOLUME ["${CONFIG_DIR}"]
 ENTRYPOINT ["/init"]
 
 # install packages
-RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unzip p7zip ca-certificates && \
-    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.14/main unrar
+RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unzip p7zip ca-certificates
+
+COPY --from=builder /usr/bin/unrar /usr/bin
 
 # make folders
 RUN mkdir "${APP_DIR}" && \
