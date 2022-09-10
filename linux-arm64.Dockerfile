@@ -18,7 +18,7 @@ RUN mkdir "${APP_DIR}" && \
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
-        ca-certificates jq curl wget2 unzip p7zip-full unrar python3 \
+        ca-certificates jq curl wget2 unzip xz-utils p7zip-full unrar python3 \
         locales tzdata && \
 # generate locale
     locale-gen en_US.UTF-8 && \
