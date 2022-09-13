@@ -1,3 +1,6 @@
+ARG UPSTREAM_IMAGE
+ARG UPSTREAM_DIGEST_AMD64
+
 FROM alpine AS builder
 
 ARG UNRAR_VER=6.1.7
@@ -21,7 +24,8 @@ RUN apk --update --no-cache add \
 && make -f makefile \
 && install -Dm 755 unrar /usr/bin/unrar
 
-FROM alpine@sha256:1304f174557314a7ed9eddb4eab12fed12cb0cd9809e4c28f29af86979a3c870
+
+FROM ${UPSTREAM_IMAGE}@${UPSTREAM_DIGEST_AMD64}
 
 ENV APP_DIR="/app" CONFIG_DIR="/config" PUID="1000" PGID="1000" UMASK="002" TZ="Etc/UTC" ARGS=""
 ENV XDG_CONFIG_HOME="${CONFIG_DIR}/.config" XDG_CACHE_HOME="${CONFIG_DIR}/.cache" XDG_DATA_HOME="${CONFIG_DIR}/.local/share" LANG="C.UTF-8" LC_ALL="C.UTF-8"
