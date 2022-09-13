@@ -1,0 +1,6 @@
+{
+  "upstream_image": "alpine",
+  "upstream_tag": "3.16",
+  "upstream_digest_amd64": "sha256:1304f174557314a7ed9eddb4eab12fed12cb0cd9809e4c28f29af86979a3c870",
+  "upstream_digest_arm64": "sha256:ed73e2bee79b3428995b16fce4221fc715a849152f364929cdccdc83db5f3d5c"
+}
