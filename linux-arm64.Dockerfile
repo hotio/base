@@ -13,6 +13,7 @@ ENTRYPOINT ["/init"]
 
 # make folders
 RUN mkdir "${APP_DIR}" && \
+    mkdir "${CONFIG_DIR}" && \
 # create user
     useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
     usermod -G users hotio

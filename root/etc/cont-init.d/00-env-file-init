@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bash
+#!/command/with-contenv bash
 # shellcheck shell=bash
 
 find /var/run/s6/container_environment/ -type f -name 'FILE__*' -print0 | while IFS= read -r -d '' FILENAME; do
