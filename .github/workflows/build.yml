@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Shellcheck
         run: |
@@ -32,7 +32,7 @@ jobs:
       branch: ${{ steps.prep.outputs.branch }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Check if architecture exists
         id: arch_check
@@ -41,11 +41,11 @@ jobs:
 
       - name: Set up QEMU
         if: "contains(steps.arch_check.outputs.check, 'passed')"
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         if: "contains(steps.arch_check.outputs.check, 'passed')"
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
         with:
           install: true
           version: latest
@@ -53,7 +53,7 @@ jobs:
 
       - name: Login to docker.io
         if: "contains(steps.arch_check.outputs.check, 'passed')"
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: docker.io
           username: ${{ secrets.DOCKER_USER }}
@@ -61,7 +61,7 @@ jobs:
 
       - name: Login to ghcr.io
         if: "contains(steps.arch_check.outputs.check, 'passed')"
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -97,9 +97,42 @@ jobs:
           echo "::set-output name=build-args::${ARGS}"
           echo "::set-output name=package-version::${GITHUB_REF//refs\/heads\//}-${GITHUB_SHA:0:7}"
 
-      - name: Build and push
+      - name: Build and push - Attempt 1
+        continue-on-error: true
         if: "contains(steps.arch_check.outputs.check, 'passed')"
-        uses: docker/build-push-action@v2
+        id: build_attempt1
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          platforms: ${{ steps.prep.outputs.platform }}
+          file: ./${{ matrix.architecture }}.Dockerfile
+          cache-from: docker.io/${{ steps.prep.outputs.cache }}
+          cache-to: docker.io/${{ steps.prep.outputs.cache }}
+          tags: |
+            docker.io/${{ steps.prep.outputs.tag }}
+            ghcr.io/${{ steps.prep.outputs.tag }}
+          labels: |
+            org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+            org.opencontainers.image.title=${{ steps.prep.outputs.title }}
+            org.opencontainers.image.revision=${{ steps.prep.outputs.revision }}
+            org.opencontainers.image.source=${{ steps.prep.outputs.source }}
+            org.opencontainers.image.vendor=${{ steps.prep.outputs.vendor }}
+            org.opencontainers.image.url=${{ steps.prep.outputs.url }}
+            org.opencontainers.image.version=${{ steps.prep.outputs.version }}
+          build-args: |
+            GITHUB_TOKEN=${{ secrets.PERSONAL_TOKEN }}
+            BUILD_ARCHITECTURE=${{ matrix.architecture }}
+            PACKAGE_VERSION=${{ steps.prep.outputs.package-version }}
+            ${{ steps.prep.outputs.build-args }}
+
+      - name: Sleep
+        if: (steps.build_attempt1.outcome == 'failure')
+        run: |
+          sleep 30
+
+      - name: Build and push - Attempt 2
+        if: (steps.build_attempt1.outcome == 'failure')
+        uses: docker/build-push-action@v3
         with:
           push: true
           platforms: ${{ steps.prep.outputs.platform }}
@@ -158,14 +191,15 @@ jobs:
           contains(matrix.architecture, 'amd64')
         run: |
           test_url=${{ steps.prep_test.outputs.url }}
-          echo "Check if app works..."
           docker run --network host -d --name service "docker.io/${{ steps.prep.outputs.tag }}"
-          currenttime=$(date +%s); maxtime=$((currenttime+60)); while (! curl -fsSL -b /dev/shm/cookie "${test_url}" > /dev/null) && [[ "$currenttime" -lt "$maxtime" ]]; do sleep 1; currenttime=$(date +%s); done
-          curl -fsSL -b /dev/shm/cookie "${test_url}" > /dev/null
-          status=$?
-          echo "Show docker logs..."
-          docker logs service
-          exit ${status}
+          currenttime=$(date +%s); maxtime=$((currenttime+120)); while (! curl -fsSL -b /dev/shm/cookie "${test_url}" > /dev/null) && [[ "$currenttime" -lt "$maxtime" ]]; do sleep 1; currenttime=$(date +%s); done
+          if curl -fsSL -b /dev/shm/cookie "${test_url}" > /dev/null; then
+            docker logs service
+            exit 0
+          else
+            docker logs service
+            exit 1
+          fi
 
       - name: Take screenshot
         if: |
@@ -186,11 +220,11 @@ jobs:
     needs: [build]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Login to docker.io
         if: matrix.registry == 'docker.io'
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: docker.io
           username: ${{ secrets.DOCKER_USER }}
@@ -198,13 +232,15 @@ jobs:
 
       - name: Login to ghcr.io
         if: matrix.registry == 'ghcr.io'
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.PERSONAL_TOKEN }}
 
-      - name: Create manifests
+      - name: Create manifests - Attempt 1
+        continue-on-error: true
+        id: manifest_attempt1
         env:
           DOCKER_CLI_EXPERIMENTAL: enabled
         run: |
@@ -227,13 +263,46 @@ jobs:
             docker manifest push   ${IMAGE}:latest
           fi
 
+      - name: Sleep
+        if: (steps.manifest_attempt1.outcome == 'failure')
+        run: |
+          sleep 30
+
+      - name: Create manifests - Attempt 2
+        if: (steps.manifest_attempt1.outcome == 'failure')
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+        run: |
+          IMAGE=${{ matrix.registry }}/${GITHUB_REPOSITORY}
+          TAG=${GITHUB_REF//refs\/heads\//}
+          SOURCE=${IMAGE}:${TAG}-${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}
+          VERSION=${{ needs.build.outputs.version }}
+          BRANCH=${{ needs.build.outputs.branch }}
+          [[ -f linux-amd64.Dockerfile ]]  && AMD64=${SOURCE}-linux-amd64
+          [[ -f linux-arm64.Dockerfile ]]  && ARM64=${SOURCE}-linux-arm64
+          [[ -f linux-arm-v7.Dockerfile ]] && ARMV7=${SOURCE}-linux-arm-v7
+          docker manifest rm     ${IMAGE}:${TAG}${BRANCH} || true
+          docker manifest create ${IMAGE}:${TAG}${BRANCH} ${AMD64} ${ARM64} ${ARMV7}
+          docker manifest push   ${IMAGE}:${TAG}${BRANCH}
+          docker manifest rm     ${IMAGE}:${TAG}${BRANCH}-${VERSION//\~/-} || true
+          docker manifest create ${IMAGE}:${TAG}${BRANCH}-${VERSION//\~/-} ${AMD64} ${ARM64} ${ARMV7}
+          docker manifest push   ${IMAGE}:${TAG}${BRANCH}-${VERSION//\~/-}
+          docker manifest rm     ${IMAGE}:${TAG}-${GITHUB_SHA:0:7} || true
+          docker manifest create ${IMAGE}:${TAG}-${GITHUB_SHA:0:7} ${AMD64} ${ARM64} ${ARMV7}
+          docker manifest push   ${IMAGE}:${TAG}-${GITHUB_SHA:0:7}
+          if [[ ${TAG} == release ]]; then
+            docker manifest rm     ${IMAGE}:latest || true
+            docker manifest create ${IMAGE}:latest ${AMD64} ${ARM64} ${ARMV7}
+            docker manifest push   ${IMAGE}:latest
+          fi
+
   notify:
     runs-on: ubuntu-20.04
-    if: ${{ always() }}
+    if: always()
     needs: [build, publish]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Download screenshot
         continue-on-error: true
