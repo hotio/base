@@ -3,7 +3,7 @@ ARG UPSTREAM_DIGEST_AMD64
 
 FROM alpine AS builder
 
-ARG UNRAR_VER=6.1.7
+ARG UNRAR_VER=6.2.4
 
 RUN apk --update --no-cache add \
     autoconf \
@@ -36,7 +36,7 @@ ENTRYPOINT ["/init"]
 # install packages
 RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unzip p7zip ca-certificates
 
-COPY --from=builder /usr/bin/unrar /usr/bin
+COPY --from=builder /usr/bin/unrar /usr/bin/
 
 # make folders
 RUN mkdir "${APP_DIR}" && \
@@ -46,7 +46,7 @@ RUN mkdir "${APP_DIR}" && \
     usermod -G users hotio
 
 # https://github.com/just-containers/s6-overlay/releases
-ARG S6_VERSION=3.1.2.1
+ARG S6_VERSION=3.1.3.0
 
 # install s6-overlay
 RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-noarch.tar.xz" | tar Jpxf - -C / && \
