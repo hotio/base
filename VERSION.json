@@ -3,5 +3,5 @@
   "upstream_image": "ubuntu",
   "upstream_tag": "22.04",
   "upstream_digest_amd64": "sha256:c985bc3f77946b8e92c9a3648c6f31751a7dd972e06604785e47303f4ad47c4c",
-  "upstream_digest_arm64": "sha256:61bd0b97000996232eb07b8d0e9375d14197f78aa850c2506417ef995a7199a7"
+  "upstream_digest_arm64": "sha256:b885cc8d4c735d3f407f4318c7ba917f4d95e90599238b25705fa0052490216e"
 }
