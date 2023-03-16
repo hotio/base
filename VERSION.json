@@ -2,6 +2,6 @@
   "description": "Ubuntu 22.04",
   "upstream_image": "ubuntu",
   "upstream_tag": "22.04",
-  "upstream_digest_amd64": "sha256:b2175cd4cfdd5cdb1740b0e6ec6bbb4ea4892801c0ad5101a81f694152b6c559",
-  "upstream_digest_arm64": "sha256:b885cc8d4c735d3f407f4318c7ba917f4d95e90599238b25705fa0052490216e"
+  "upstream_digest_amd64": "sha256:7a57c69fe1e9d5b97c5fe649849e79f2cfc3bf11d10bbd5218b4eb61716aebe6",
+  "upstream_digest_arm64": "sha256:537da24818633b45fcb65e5285a68c3ec1f3db25f5ae5476a7757bc8dfae92a3"
 }
