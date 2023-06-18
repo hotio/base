@@ -1,7 +1,7 @@
 {
-  "description": "Alpine 3.16",
+  "description": "Alpine 3.18",
   "upstream_image": "alpine",
-  "upstream_tag": "3.16",
+  "upstream_tag": "3.18",
   "upstream_digest_amd64": "sha256:5fefcf0a67bdce28447c74b2f4e7cdfc9b8f9ed39fc7d3567b09a8f7cbdab098",
   "upstream_digest_arm64": "sha256:c0d719c2b86a494dd19dc07971f141f800d1e754aed280479ed0f744fe5fb5ad"
 }
