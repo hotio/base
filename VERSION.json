@@ -2,6 +2,6 @@
   "description": "Alpine 3.18",
   "upstream_image": "alpine",
   "upstream_tag": "3.18",
-  "upstream_digest_amd64": "sha256:25fad2a32ad1f6f510e528448ae1ec69a28ef81916a004d3629874104f8a7f70",
-  "upstream_digest_arm64": "sha256:e3bd82196e98898cae9fe7fbfd6e2436530485974dc4fb3b7ddb69134eda2407"
+  "upstream_digest_amd64": "sha256:c5c5fda71656f28e49ac9c5416b3643eaa6a108a8093151d6d1afc9463be8e33",
+  "upstream_digest_arm64": "sha256:b312e4b0e2c665d634602411fcb7c2699ba748c36f59324457bc17de485f36f6"
 }
