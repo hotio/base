@@ -31,7 +31,7 @@ RUN apt update && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
 
 # https://github.com/just-containers/s6-overlay/releases
-ARG S6_VERSION=3.1.3.0
+ARG S6_VERSION=3.1.5.0
 
 # install s6-overlay
 RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-noarch.tar.xz" | tar Jpxf - -C / && \
