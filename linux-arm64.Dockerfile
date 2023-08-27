@@ -41,6 +41,3 @@ RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/
 
 ARG BUILD_ARCHITECTURE
 ENV BUILD_ARCHITECTURE=$BUILD_ARCHITECTURE
-
-COPY root/ /
-RUN chmod -R +x /etc/cont-init.d/
