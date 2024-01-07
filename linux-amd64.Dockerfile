@@ -3,7 +3,7 @@ ARG UPSTREAM_DIGEST_AMD64
 
 FROM alpine AS builder
 
-ARG UNRAR_VER=6.2.4
+ARG UNRAR_VER=6.2.12
 
 RUN apk --update --no-cache add \
     autoconf \
