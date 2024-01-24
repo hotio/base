@@ -25,7 +25,8 @@ RUN mkdir "${APP_DIR}" && \
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
         ca-certificates jq curl wget wget2 unzip xz-utils p7zip-full unrar python3 \
-        locales tzdata && \
+        locales tzdata \
+        privoxy iptables iproute2 openresolv wireguard-tools ipcalc wireguard-go natpmpc && \
 # generate locale
     locale-gen en_US.UTF-8 && \
 # clean up
