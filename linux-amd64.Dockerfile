@@ -15,13 +15,6 @@ VOLUME ["${CONFIG_DIR}"]
 ENTRYPOINT ["/init"]
 
 ARG DEBIAN_FRONTEND="noninteractive"
-# make folders
-RUN mkdir "${APP_DIR}" && \
-    mkdir "${CONFIG_DIR}" && \
-# create user
-    useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
-    usermod -G users hotio
-
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
@@ -41,6 +34,13 @@ RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/
     curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-x86_64.tar.xz" | tar Jpxf - -C / && \
     curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-symlinks-noarch.tar.xz" | tar Jpxf - -C / && \
     curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-symlinks-arch.tar.xz" | tar Jpxf - -C /
+
+# make folders
+RUN mkdir "${APP_DIR}" && \
+    mkdir "${CONFIG_DIR}" && \
+# create user
+    useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
+    usermod -G users hotio
 
 COPY root/ /
 RUN chmod +x /init-hook
