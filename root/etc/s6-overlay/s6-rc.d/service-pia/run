@@ -8,7 +8,7 @@ while true; do
     pf_hostname=$(grep -o 'WG_HOSTNAME=.*\s' "${CONFIG_DIR}/wireguard/pia_output.log" | sed 's/ //g' | sed 's/WG_HOSTNAME=//g')
     pf_gateway=$(grep -o 'WG_SERVER_IP=.*\sWG' "${CONFIG_DIR}/wireguard/pia_output.log" | sed 's/ WG//g' | sed 's/WG_SERVER_IP=//g')
 
-    echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] PIA token retrieval started..."
+    echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Token retrieval started..."
     pia_token=""
     while [[ -z "${pia_token}" ]]; do
         PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} ./get_token.sh
@@ -30,23 +30,23 @@ while true; do
             # shellcheck source=/dev/null
             source "${APP_DIR}/forwarded_port_update_app"
         fi
-        echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] PIA forwarded port is ${pia_port}, will expire at ${pia_port_expiration}."
+        echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Forwarded port is \"${pia_port}\", will expire at \"${pia_port_expiration}\"."
         diff=100
         while [[ ${diff} -gt 2 ]]; do
             bind_port_response="$(curl -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
             if [[ $(echo "${bind_port_response}" | jq -r '.status') == "OK" ]]; then
-                echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] PIA port bind succeeded."
+                echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind succeeded."
             else
-                echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] PIA port bind failed!"
+                echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind failed!"
             fi
             date_one=$(date -d "${pia_port_expiration}" +%s)
             date_two=$(date -d "$(date)" +%s)
             diff=$(( (date_one - date_two) / 86400 ))
-            echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] PIA port still valid for ${diff} days."
+            echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port still valid for ${diff} days."
             sleep 900
         done
     else
-        echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] PIA signature and payload retrieval failed!"
+        echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Signature and Payload retrieval failed!"
     fi
     sleep 60
 done
