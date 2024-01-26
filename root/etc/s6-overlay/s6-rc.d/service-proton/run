@@ -8,7 +8,7 @@ vpn_gw="${vpn_gw%.*}.1"
 
 while true; do
     if ! natpmpc -g "${vpn_gw}" &> /dev/null; then
-        echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] ProtonVPN endpoint \"${vpn_gw%.*}.1\" does not support port forwarding!"
+        echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Endpoint \"${vpn_gw%.*}.1\" does not support port forwarding!"
     else
         port=$(natpmpc -g "${vpn_gw}" -a 1 0 udp 60 | grep -P -o -m 1 '(?<=Mapped public port\s)\d+')
         if [[ -n "${port}" ]]; then
@@ -20,9 +20,9 @@ while true; do
                 # shellcheck source=/dev/null
                 source "${APP_DIR}/forwarded_port_update_app"
             fi
-            echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] ProtonVPN forwarded port is \"${port}\"."
+            echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Forwarded port is \"${port}\"."
         else
-            echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] ProtonVPN port forwarding failed!"
+            echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Port forwarding failed!"
         fi
     fi
     sleep 45
