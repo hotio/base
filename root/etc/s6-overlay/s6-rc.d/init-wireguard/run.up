@@ -14,7 +14,7 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "
 		[[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && pia_ipv6="yes"
 	done
 	cd "${APP_DIR}/pia-scripts"
-	PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION} DISABLE_IPV6=${pia_ipv6} AUTOCONNECT="" PIA_CONNECT="false" PIA_PF="true" VPN_PROTOCOL=wireguard PIA_CONF_PATH="${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" DIP_TOKEN=no PIA_DNS=false "./run_setup.sh" | tee /tmp/pia_output.log
+	PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION} DISABLE_IPV6=${pia_ipv6} AUTOCONNECT="" PIA_CONNECT="false" PIA_PF="${VPN_AUTO_PORT_FORWARD}" VPN_PROTOCOL=wireguard PIA_CONF_PATH="${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" DIP_TOKEN=no PIA_DNS=false "./run_setup.sh" | tee /tmp/pia_output.log
 fi
 
 if [[ ${VPN_ENABLED} == "true" ]]; then
