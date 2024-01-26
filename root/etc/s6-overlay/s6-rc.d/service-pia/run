@@ -12,6 +12,7 @@ while true; do
     pia_token=""
     while [[ -z "${pia_token}" ]]; do
         PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} ./get_token.sh
+        touch /opt/piavpn-manual/token
         pia_token=$(head -1 /opt/piavpn-manual/token)
     done
 
