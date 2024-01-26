@@ -3,5 +3,6 @@
   "upstream_image": "alpine",
   "upstream_tag": "3.18",
   "upstream_digest_amd64": "sha256:d695c3de6fcd8cfe3a6222b0358425d40adfd129a8a47c3416faff1a8aece389",
-  "upstream_digest_arm64": "sha256:d4ade3639c27579321046d78cc44ec978cea8357d56932611984f601d27e30ac"
+  "upstream_digest_arm64": "sha256:d4ade3639c27579321046d78cc44ec978cea8357d56932611984f601d27e30ac",
+  "pia_version": "e956c57849a38f912e654e0357f5ae456dfd1742"
 }
