@@ -5,8 +5,8 @@ umask "${UMASK}"
 
 while true; do
     cd "${APP_DIR}/pia-scripts" || exit 1
-    pf_hostname=$(grep -o 'WG_HOSTNAME=.*\s' /tmp/pia_output.log | sed 's/ //g' | sed 's/WG_HOSTNAME=//g')
-    pf_gateway=$(grep -o 'WG_SERVER_IP=.*\sWG' /tmp/pia_output.log | sed 's/ WG//g' | sed 's/WG_SERVER_IP=//g')
+    pf_hostname=$(grep -o 'WG_HOSTNAME=.*\s' "${CONFIG_DIR}/wireguard/pia_output.log" | sed 's/ //g' | sed 's/WG_HOSTNAME=//g')
+    pf_gateway=$(grep -o 'WG_SERVER_IP=.*\sWG' "${CONFIG_DIR}/wireguard/pia_output.log" | sed 's/ WG//g' | sed 's/WG_SERVER_IP=//g')
 
     echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] PIA token retrieval started..."
     pia_token=""
