@@ -3,6 +3,14 @@
 
 umask "${UMASK}"
 
+mask() {
+    local n=3
+    [[ ${#1} -le 5 ]] && n=$(( ${#1} - 3 ))
+    local a="${1:0:${#1}-n}"
+    local b="${1:${#1}-n}"
+    printf "%s%s\n" "${a//?/*}" "$b"
+}
+
 echo "
 ----------------------------------------------------------------------
 ENVIRONMENT BASE
@@ -17,8 +25,8 @@ VPN_LAN_NETWORK=${VPN_LAN_NETWORK}
 VPN_CONF=${VPN_CONF}
 VPN_ADDITIONAL_PORTS=${VPN_ADDITIONAL_PORTS}
 VPN_AUTO_PORT_FORWARD=${VPN_AUTO_PORT_FORWARD}
-VPN_PIA_USER=${VPN_PIA_USER}
-VPN_PIA_PASS=${VPN_PIA_PASS}
+VPN_PIA_USER=$(mask "${VPN_PIA_USER}")
+VPN_PIA_PASS=$(mask "${VPN_PIA_PASS}")
 VPN_PIA_PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION}
 PRIVOXY_ENABLED=${PRIVOXY_ENABLED}
 ----------------------------------------------------------------------
