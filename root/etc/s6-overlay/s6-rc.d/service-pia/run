@@ -48,4 +48,5 @@ while true; do
     else
         echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] PIA signature and payload retrieval failed!"
     fi
+    sleep 60
 done
