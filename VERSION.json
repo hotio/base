@@ -3,5 +3,6 @@
   "upstream_image": "ubuntu",
   "upstream_tag": "22.04",
   "upstream_digest_amd64": "sha256:cb2af41f42b9c9bc9bcdc7cf1735e3c4b3d95b2137be86fd940373471a34c8b0",
-  "upstream_digest_arm64": "sha256:afac4974cb9b641c068be76ab33dcce876891a51ab8d80520233ff06970018a1"
+  "upstream_digest_arm64": "sha256:afac4974cb9b641c068be76ab33dcce876891a51ab8d80520233ff06970018a1",
+  "pia_version": "e956c57849a38f912e654e0357f5ae456dfd1742"
 }

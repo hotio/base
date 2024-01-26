@@ -13,12 +13,12 @@ while true; do
         port=$(natpmpc -g "${vpn_gw}" -a 1 0 udp 60 | grep -P -o -m 1 '(?<=Mapped public port\s)\d+')
         if [[ -n "${port}" ]]; then
             natpmpc -g "${vpn_gw}" -a 1 0 tcp 60 &> /dev/null
-            touch "${CONFIG_DIR}/forwarded_port"
-            old_port=$(cat "${CONFIG_DIR}/forwarded_port")
+            touch "${CONFIG_DIR}/wireguard/forwarded_port"
+            old_port=$(cat "${CONFIG_DIR}/wireguard/forwarded_port")
             if [[ "${port}" != "${old_port}" ]]; then
-                echo "${port}" > "${CONFIG_DIR}/forwarded_port"
+                echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
                 # shellcheck source=/dev/null
-                source "${APP_DIR}/proton_update_app"
+                source "${APP_DIR}/forwarded_port_update_app"
             fi
             echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] ProtonVPN forwarded port is \"${port}\"."
         else
