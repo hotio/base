@@ -3,6 +3,15 @@
 
 umask "${UMASK}"
 
+if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]]; then
+	echo "[INFO] Downloading PIA regions list to \"${CONFIG_DIR}/wireguard/pia-regions.txt\"..."
+	if [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
+		mkdir -p "${CONFIG_DIR}/wireguard"
+		chown hotio:hotio "${CONFIG_DIR}/wireguard"
+	fi
+	curl -fsSL https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -r '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' | awk 'NR<3{print $0;next}{print $0| "sort"}' | column -t -c 3 -s "|" > "${CONFIG_DIR}/wireguard/pia-regions.txt"
+fi
+
 if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.json" ]]; then
 	rm -rf "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
 fi
