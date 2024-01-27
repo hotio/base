@@ -14,7 +14,19 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "
 		[[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && pia_ipv6="yes"
 	done
 	cd "${APP_DIR}/pia-scripts"
-	PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION} DISABLE_IPV6=${pia_ipv6} AUTOCONNECT="" PIA_CONNECT="false" PIA_PF="${VPN_AUTO_PORT_FORWARD}" VPN_PROTOCOL=wireguard PIA_CONF_PATH="${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" DIP_TOKEN=no PIA_DNS=false "./run_setup.sh" | tee "${CONFIG_DIR}/wireguard/pia_output.log"
+	if output=$(PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION} DISABLE_IPV6=${pia_ipv6} AUTOCONNECT="" PIA_CONNECT="false" PIA_PF="${VPN_AUTO_PORT_FORWARD}" VPN_PROTOCOL=wireguard PIA_CONF_PATH="${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" DIP_TOKEN=no PIA_DNS=false timeout 60s "./run_setup.sh"); then
+		wg_hostname=$(grep -Po '(?<=WG_HOSTNAME=)[^ ]+' <<< "${output}")
+    	wg_server_ip=$(grep -Po '(?<=WG_SERVER_IP=)[^ ]+' <<< "${output}")
+		jq '.hostname = "'"${wg_hostname}"'" | .ip = "'"${wg_server_ip}"'"' <<< "{}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
+		chown hotio:hotio "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
+		chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
+		echo "[INFO] PIA WireGuard config written to \"${CONFIG_DIR}/wireguard/${VPN_CONF}.conf\"."
+	else
+		echo "${output}" > "${CONFIG_DIR}/wireguard/pia.log"
+		chown hotio:hotio "${CONFIG_DIR}/wireguard/pia.log"
+		echo "[ERROR] Something went wrong trying to get a PIA WireGuard config. See log file \"${CONFIG_DIR}/wireguard/pia.log\". Exiting..."
+		exit 1
+	fi
 fi
 
 if [[ ${VPN_ENABLED} == "true" ]]; then
