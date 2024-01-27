@@ -4,49 +4,54 @@
 umask "${UMASK}"
 
 while true; do
-    cd "${APP_DIR}/pia-scripts" || exit 1
-    pf_hostname=$(grep -o 'WG_HOSTNAME=.*\s' "${CONFIG_DIR}/wireguard/pia_output.log" | sed 's/ //g' | sed 's/WG_HOSTNAME=//g')
-    pf_gateway=$(grep -o 'WG_SERVER_IP=.*\sWG' "${CONFIG_DIR}/wireguard/pia_output.log" | sed 's/ WG//g' | sed 's/WG_SERVER_IP=//g')
+    if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.json" ]]; then
+        cd "${APP_DIR}/pia-scripts" || exit 1
+        pf_hostname=$(jq -r '.hostname' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.json")
+        pf_gateway=$(jq -r '.ip' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.json")
 
-    echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Token retrieval started..."
-    pia_token=""
-    while [[ -z "${pia_token}" ]]; do
-        PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} ./get_token.sh
-        touch /opt/piavpn-manual/token
-        pia_token=$(head -1 /opt/piavpn-manual/token)
-    done
-
-    pia_response=$(curl -s -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" -G --data-urlencode "token=${pia_token}" "https://${pf_hostname}:19999/getSignature")
-    if [[ $(echo "${pia_response}" | jq -r '.status') == "OK" ]]; then
-        pia_payload=$(echo "${pia_response}" | jq -r .payload)
-        pia_signature=$(echo "${pia_response}" | jq -r .signature)
-        pia_payload_decoded=$(echo "${pia_payload}" | base64 -d | jq)
-        pia_port=$(echo "${pia_payload_decoded}" | jq -r .port)
-        pia_port_expiration=$(echo "${pia_payload_decoded}" | jq -r .expires_at)
-        touch "${CONFIG_DIR}/wireguard/forwarded_port"
-        old_port=$(cat "${CONFIG_DIR}/wireguard/forwarded_port")
-        if [[ "${pia_port}" != "${old_port}" ]]; then
-            echo "${pia_port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
-            # shellcheck source=/dev/null
-            source "${APP_DIR}/forwarded_port_update_app"
-        fi
-        echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Forwarded port is \"${pia_port}\", will expire at \"${pia_port_expiration}\"."
-        diff=100
-        while [[ ${diff} -gt 2 ]]; do
-            bind_port_response="$(curl -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
-            if [[ $(echo "${bind_port_response}" | jq -r '.status') == "OK" ]]; then
-                echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind succeeded."
-            else
-                echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind failed!"
-            fi
-            date_one=$(date -d "${pia_port_expiration}" +%s)
-            date_two=$(date -d "$(date)" +%s)
-            diff=$(( (date_one - date_two) / 86400 ))
-            echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port still valid for ${diff} days."
-            sleep 900
+        pia_token=""
+        while [[ -z "${pia_token}" ]]; do
+            echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Token retrieval started..."
+            PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} ./get_token.sh > /dev/null
+            touch /opt/piavpn-manual/token
+            pia_token=$(head -1 /opt/piavpn-manual/token)
         done
+
+        pia_response=$(curl -s -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" -G --data-urlencode "token=${pia_token}" "https://${pf_hostname}:19999/getSignature")
+        if [[ $(echo "${pia_response}" | jq -r '.status') == "OK" ]]; then
+            pia_payload=$(echo "${pia_response}" | jq -r .payload)
+            pia_signature=$(echo "${pia_response}" | jq -r .signature)
+            pia_payload_decoded=$(echo "${pia_payload}" | base64 -d | jq)
+            pia_port=$(echo "${pia_payload_decoded}" | jq -r .port)
+            pia_port_expiration=$(echo "${pia_payload_decoded}" | jq -r .expires_at)
+            touch "${CONFIG_DIR}/wireguard/forwarded_port"
+            old_port=$(cat "${CONFIG_DIR}/wireguard/forwarded_port")
+            if [[ "${pia_port}" != "${old_port}" ]]; then
+                echo "${pia_port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
+                # shellcheck source=/dev/null
+                source "${APP_DIR}/forwarded_port_update_app"
+            fi
+            echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Forwarded port is \"${pia_port}\", will expire at \"${pia_port_expiration}\"."
+            diff=100
+            while [[ ${diff} -gt 2 ]]; do
+                bind_port_response="$(curl -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
+                if [[ $(echo "${bind_port_response}" | jq -r '.status') == "OK" ]]; then
+                    echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind succeeded."
+                else
+                    echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind failed!"
+                fi
+                date_one=$(date -d "${pia_port_expiration}" +%s)
+                date_two=$(date -d "$(date)" +%s)
+                diff=$(( (date_one - date_two) / 86400 ))
+                echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port still valid for ${diff} days."
+                sleep 900
+            done
+        else
+            echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Signature and Payload retrieval failed!"
+        fi
+        sleep 60
     else
-        echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Signature and Payload retrieval failed!"
+        echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] File \"${CONFIG_DIR}/wireguard/${VPN_CONF}.json\" not found! Checking again in 60 seconds..."
+        sleep 60
     fi
-    sleep 60
 done
