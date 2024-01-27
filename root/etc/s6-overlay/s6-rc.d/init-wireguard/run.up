@@ -3,6 +3,10 @@
 
 umask "${UMASK}"
 
+if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.json" ]]; then
+	rm -rf "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
+fi
+
 if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
 	echo "[INFO] Trying to get a PIA WireGuard config..."
 	if [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
