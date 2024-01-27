@@ -200,4 +200,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
 	set +e
 
+	curl -fsL -4 --retry 5 --retry-max-time 60 wtfismyip.com/json | jq -r '"[INFO] [IPV4][\(.YourFuckingIPAddress)][\(.YourFuckingLocation)][\(.YourFuckingISP)]"'
+	if [[ ${ipv6_wanted} == "true" ]]; then
+		curl -fsL -6 --retry 5 --retry-max-time 60 wtfismyip.com/json | jq -r '"[INFO] [IPV6][\(.YourFuckingIPAddress)][\(.YourFuckingLocation)][\(.YourFuckingISP)]"'
+	fi
 fi
