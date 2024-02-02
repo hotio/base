@@ -13,6 +13,7 @@ mask() {
 
 echo "
 $(figlet "hotio")
+Donate:        https://hotio.dev/donate
 Documentation: https://hotio.dev/containers/$(jq -r '.app' <<< "$(echo "${IMAGE_STATS}" | base64 --decode)")
 Support:       https://hotio.dev/discord
 Image:         $(jq -r '.image' <<< "$(echo "${IMAGE_STATS}" | base64 --decode)")
