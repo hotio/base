@@ -77,6 +77,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 	else
 		echo "[INFO] WireGuard is down. Continuing..."
 	fi
+
 	echo "[INFO] Starting WireGuard..."
 	if wg-quick up "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"; then
 		echo "[INFO] WireGuard is started."
@@ -135,8 +136,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 		ip route add "${lan_network}" via "${gateway}" dev "${nw_interface}"
 	done
 
-	echo "[INFO] Adding \"${vpn_remote}\" as route via interface \"${nw_interface}\"."
-	ip route add "${vpn_remote%:*}" via "${gateway}" dev "${nw_interface}" table "${vpn_port}"
+	echo "[INFO] Adding \"${vpn_remote%:*}\" as route via interface \"${nw_interface}\"."
+	ip route add "${vpn_remote%:*}" via "${gateway}" dev "${nw_interface}"
 
 	echo "[INFO] ip route overview:"
 	ip route
