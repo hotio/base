@@ -17,7 +17,7 @@ while true; do
             pia_token=$(head -1 /opt/piavpn-manual/token)
         done
 
-        pia_response=$(curl --interface wg0 -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "token=${pia_token}" "https://${pf_hostname}:19999/getSignature")
+        pia_response=$(curl --interface "${VPN_CONF}" -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "token=${pia_token}" "https://${pf_hostname}:19999/getSignature")
         if [[ $(echo "${pia_response}" | jq -r '.status') == "OK" ]]; then
             pia_payload=$(echo "${pia_response}" | jq -r .payload)
             pia_signature=$(echo "${pia_response}" | jq -r .signature)
@@ -34,7 +34,7 @@ while true; do
             echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Forwarded port is \"${pia_port}\", will expire at \"${pia_port_expiration}\"."
             diff=100
             while [[ ${diff} -gt 2 ]]; do
-                bind_port_response="$(curl --interface wg0 -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
+                bind_port_response="$(curl --interface "${VPN_CONF}" -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
                 if [[ $(echo "${bind_port_response}" | jq -r '.status') == "OK" ]]; then
                     echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind succeeded."
                 else
