@@ -110,12 +110,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 		VPN_ADDITIONAL_PORTS+=",8118/tcp,8118/udp"
 	fi
 
-	vpn_endpoint=$(grep Endpoint "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" | awk '{print $3}')
+	vpn_endpoint=$(wg show | grep endpoint: | awk '{print $2}')
 	vpn_endpoint_port=${vpn_endpoint##*:}
-	regexv4='^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'
-	if ! [[ ${vpn_endpoint%:*} =~ ${regexv4} ]]; then
-		vpn_endpoint=$(dig -4 +short A "${vpn_endpoint%:*}"):${vpn_endpoint_port}
-	fi
 	echo "[INFO] WireGuard endpoint is \"${vpn_endpoint}\"."
 
 	nw_interface=$(ip -o -4 route show to default | awk '{print $5}')
