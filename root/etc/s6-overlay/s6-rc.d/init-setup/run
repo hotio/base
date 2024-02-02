@@ -12,6 +12,13 @@ mask() {
 }
 
 echo "
+$(figlet "hotio")
+Documentation: https://hotio.dev/$([[ -f /image_stats.json ]] && jq -r '.app' < /image_stats.json)
+Support:       https://hotio.dev/discord
+Image:         $([[ -f /image_stats.json ]] && jq -r '.image' < /image_stats.json)
+Revision:      $([[ -f /image_stats.json ]] && jq -r '.revision' < /image_stats.json)
+Version:       $([[ -f /image_stats.json ]] && jq -r '.version' < /image_stats.json)
+
 ----------------------------------------------------------------------
 ENVIRONMENT BASE
 ----------------------------------------------------------------------

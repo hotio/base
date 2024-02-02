@@ -19,7 +19,7 @@ ARG DEBIAN_FRONTEND="noninteractive"
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
-        ca-certificates jq curl wget wget2 unzip xz-utils p7zip-full unrar python3 bsdmainutils \
+        ca-certificates jq curl wget wget2 unzip xz-utils p7zip-full unrar python3 bsdmainutils figlet \
         locales tzdata \
         privoxy iptables iproute2 openresolv wireguard-tools ipcalc wireguard-go natpmpc && \
 # generate locale
