@@ -109,8 +109,12 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 		VPN_ADDITIONAL_PORTS+=",8118/tcp,8118/udp"
 	fi
 
-	vpn_remote=$(grep -P -o -m 1 '(?<=^Endpoint)(\s{0,})[^\n\r]+' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"| sed -e 's~^[=\ ]*~~')
-	vpn_port=$(echo "${vpn_remote}" | grep -P -o -m 1 '(?<=:)\d{2,5}(?=:)?+')
+	vpn_remote=$(grep Endpoint "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" | awk '{print $3}')
+	vpn_port=${vpn_remote##*:}
+	regexv4='^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'
+	if ! [[ ${vpn_remote%:*} =~ ${regexv4} ]]; then
+		vpn_remote=$(dig -4 +short A "${vpn_remote%:*}"):${vpn_port}
+	fi
 	echo "[INFO] WireGuard remote is \"${vpn_remote}\"."
 
 	nw_interface=$(ip -o -4 route show to default | awk '{print $5}')
@@ -130,6 +134,9 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 		echo "[INFO] Adding \"${lan_network}\" as route via interface \"${nw_interface}\"."
 		ip route add "${lan_network}" via "${gateway}" dev "${nw_interface}"
 	done
+
+	echo "[INFO] Adding \"${vpn_remote}\" as route via interface \"${nw_interface}\"."
+	ip route add "${vpn_remote%:*}" via "${gateway}" dev "${nw_interface}" table "${vpn_port}"
 
 	echo "[INFO] ip route overview:"
 	ip route
