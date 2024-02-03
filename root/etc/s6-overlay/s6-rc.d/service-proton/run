@@ -3,7 +3,7 @@
 
 umask "${UMASK}"
 
-vpn_gw=$(grep -P -o -m 1 '(?<=^Address)(\s{0,})[^/]+' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"| sed -e 's~^[=\ ]*~~')
+vpn_gw=$(grep Address "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" | awk '{print $3}')
 vpn_gw="${vpn_gw%.*}.1"
 
 while true; do
