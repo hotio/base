@@ -71,6 +71,14 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 		chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
 	fi
 
+	if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && grep ^DNS "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null; then
+		resolv=$(cat "/etc/resolv.conf")
+		echo "[INFO] Current resolv.conf is:"
+		echo "################################"
+		echo "${resolv}"
+		echo "################################"
+	fi
+
 	if wg-quick down "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null 2>&1; then
 		echo "[INFO] WireGuard is still running. Stopping WireGuard..."
 		sleep 1
@@ -96,6 +104,15 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 	done
 
 	set -e
+
+	if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && grep ^DNS "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null; then
+		echo "${resolv}" >> "/etc/resolv.conf"
+		resolv=$(cat "/etc/resolv.conf")
+		echo "[INFO] New resolv.conf is:"
+		echo "################################"
+		echo "${resolv}"
+		echo "################################"
+	fi
 
 	echo "[INFO] WebUI ports are \"${WEBUI_PORTS}\"."
 	echo "[INFO] Additional ports are \"${VPN_ADDITIONAL_PORTS}\"."
