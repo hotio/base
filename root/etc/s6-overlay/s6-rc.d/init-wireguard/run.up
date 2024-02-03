@@ -220,9 +220,9 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
 	set +e
 
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Testing internet connectivity..."
-	curl -fsL -4 --retry 5 --retry-max-time 60 wtfismyip.com/json | jq -r '"[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [IPV4][\(.YourFuckingIPAddress)][\(.YourFuckingLocation)][\(.YourFuckingISP)]"'
+	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Internet connectivity test results:"
+	curl -fsL -4 --retry 5 --retry-max-time 60 wtfismyip.com/json | jq -r '"[IPV4][\(.YourFuckingIPAddress)][\(.YourFuckingLocation)][\(.YourFuckingISP)]"'
 	if [[ ${ipv6_wanted} == "true" ]]; then
-		curl -fsL -6 --retry 5 --retry-max-time 60 wtfismyip.com/json | jq -r '"[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [IPV6][\(.YourFuckingIPAddress)][\(.YourFuckingLocation)][\(.YourFuckingISP)]"'
+		curl -fsL -6 --retry 5 --retry-max-time 60 wtfismyip.com/json | jq -r '"[IPV6][\(.YourFuckingIPAddress)][\(.YourFuckingLocation)][\(.YourFuckingISP)]"'
 	fi
 fi
