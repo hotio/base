@@ -74,9 +74,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 	if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && grep ^DNS "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null; then
 		resolv=$(cat "/etc/resolv.conf")
 		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Current resolv.conf is:"
-		echo "################################"
 		echo "${resolv}"
-		echo "################################"
 	fi
 
 	if wg-quick down "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null 2>&1; then
@@ -109,9 +107,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 		echo "${resolv}" >> "/etc/resolv.conf"
 		resolv=$(cat "/etc/resolv.conf")
 		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] New resolv.conf is:"
-		echo "################################"
 		echo "${resolv}"
-		echo "################################"
 	fi
 
 	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WebUI ports are \"${WEBUI_PORTS}\"."
