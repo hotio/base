@@ -45,19 +45,29 @@ fi
 
 if [[ ${VPN_ENABLED} == "true" ]]; then
 
-	if ip a show docker0 up > /dev/null 2>&1; then
-		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker network type \"host\" is not supported with VPN enabled. Exiting..."
+	if ! capsh --print | grep -q "Current:.*cap_net_admin"; then
+		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Capability \"NET_ADMIN\" is not set. Exiting..."
+		echo "Use: --cap-add=NET_ADMIN"
 		exit 1
-	else
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker network type is not set to \"host\"."
 	fi
 
 	if [[ "$(cat /proc/sys/net/ipv4/conf/all/src_valid_mark)" != "1" ]]; then
-		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] \"sysctl net.ipv4.conf.all.src_valid_mark=1\" is not set. Exiting..."
+		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Sysctl \"net.ipv4.conf.all.src_valid_mark=1\" is not set. Exiting..."
+		echo "Use: --sysctl=\"net.ipv4.conf.all.src_valid_mark=1\""
 		exit 1
 	else
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] \"sysctl net.ipv4.conf.all.src_valid_mark=1\" is set."
 		sed -i "s:sysctl -q net.ipv4.conf.all.src_valid_mark=1:echo skipping setting net.ipv4.conf.all.src_valid_mark:" /usr/bin/wg-quick
+	fi
+
+	if [[ "$(cat /proc/sys/net/ipv6/conf/all/disable_ipv6)" != "1" ]]; then
+		echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Sysctl \"net.ipv6.conf.all.disable_ipv6=1\" is not set. Consider disabling ipv6."
+		echo "Use: --sysctl=\"net.ipv6.conf.all.disable_ipv6=1\""
+	fi
+
+	if ip a show docker0 up > /dev/null 2>&1; then
+		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker network type \"host\" is not supported with VPN enabled. Exiting..."
+		echo "Use: bridge (preferably custom)"
+		exit 1
 	fi
 
 	if [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
