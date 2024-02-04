@@ -16,11 +16,11 @@ while true; do
             touch "${CONFIG_DIR}/wireguard/forwarded_port"
             old_port=$(cat "${CONFIG_DIR}/wireguard/forwarded_port")
             if [[ "${port}" != "${old_port}" ]]; then
+                echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Forwarded port is \"${port}\"."
                 echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
                 # shellcheck source=/dev/null
                 source "${APP_DIR}/forwarded_port_update_app"
             fi
-            echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Forwarded port is \"${port}\"."
         else
             echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Port forwarding failed!"
         fi
