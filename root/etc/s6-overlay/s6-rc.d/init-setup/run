@@ -16,7 +16,8 @@ image=$(jq -r '.image' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
 branch=$(awk -F ':' '{print $2}' <<< "${image}")
 repo=$(awk -F ':' '{print $1}' <<< "${image}")
 revision=$(jq -r '.revision' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
-revision_status=$(curl -fsL "https://api.github.com/repos/${repo}/compare/${branch}...${revision}" | jq -r 'if (.behind_by | length) != 0 then "(\(.status), by \(.behind_by))" else empty end')
+latest_revision=$(curl -fsL "https://raw.githubusercontent.com/${repo}/master/tags.json" | jq -r '.'"${branch}"'.tags[2]' 2> /dev/null | awk -F '-' '{print $2}')
+revision_status=$(curl -fsL "https://api.github.com/repos/${repo}/compare/${latest_revision}...${revision}" | jq -r 'if (.behind_by | length) != 0 then "(\(.status), by \(.behind_by))" else empty end')
 
 echo "
 $(figlet "hotio")
