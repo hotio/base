@@ -3,12 +3,13 @@
 
 umask "${UMASK}"
 
+if [[ ${VPN_ENABLED} == "true" ]] && [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
+	mkdir -p "${CONFIG_DIR}/wireguard"
+	chown hotio:hotio "${CONFIG_DIR}/wireguard"
+fi
+
 if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]]; then
 	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Downloading regions list to \"${CONFIG_DIR}/wireguard/pia-regions.txt\"..."
-	if [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
-		mkdir -p "${CONFIG_DIR}/wireguard"
-		chown hotio:hotio "${CONFIG_DIR}/wireguard"
-	fi
 	curl -fsSL https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -r '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' | awk 'NR<3{print $0;next}{print $0| "sort"}' | column -t -c 3 -s "|" > "${CONFIG_DIR}/wireguard/pia-regions.txt"
 	chown hotio:hotio "${CONFIG_DIR}/wireguard/pia-regions.txt"
 fi
@@ -19,10 +20,6 @@ fi
 
 if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
 	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Trying to get a WireGuard config..."
-	if [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
-		mkdir -p "${CONFIG_DIR}/wireguard"
-		chown hotio:hotio "${CONFIG_DIR}/wireguard"
-	fi
 	pia_ipv6="no"
 	for file in /proc/sys/net/ipv6/conf/*; do
 		[[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && pia_ipv6="yes"
@@ -71,12 +68,9 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 	fi
 
 	if [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
-		mkdir -p "${CONFIG_DIR}/wireguard"
-		chown hotio:hotio "${CONFIG_DIR}/wireguard"
 		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuration file \"${CONFIG_DIR}/wireguard/${VPN_CONF}.conf\" was not found. Exiting..."
 		exit 1
 	else
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuration file \"${CONFIG_DIR}/wireguard/${VPN_CONF}.conf\" was found."
 		chown hotio:hotio "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
 		chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
 	fi
@@ -89,9 +83,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
 	if wg-quick down "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null 2>&1; then
 		echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard is still running. Stopping WireGuard..."
-		sleep 1
-	else
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard is down. Continuing..."
+		sleep 5
 	fi
 
 	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Starting WireGuard..."
@@ -107,11 +99,9 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 			break
 		else
 			echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Waiting for \"${VPN_CONF}\" interface to come online."
-			sleep 1
+			sleep 5
 		fi
 	done
-
-	set -e
 
 	if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && grep ^DNS "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null; then
 		echo "${resolv}" >> "/etc/resolv.conf"
@@ -119,6 +109,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] New resolv.conf is:"
 		echo "${resolv}"
 	fi
+
+	set -e
 
 	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WebUI ports are \"${WEBUI_PORTS}\"."
 	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Additional ports are \"${VPN_ADDITIONAL_PORTS}\"."
