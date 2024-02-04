@@ -11,14 +11,21 @@ mask() {
     printf "%s%s\n" "${a//?/*}" "$b"
 }
 
+#IMAGE_STATS=ewogICJhcHAiOiAicWJpdHRvcnJlbnQiLAogICJpbWFnZSI6ICJob3Rpby9xYml0dG9ycmVudDpyZWxlYXNlIiwKICAicmV2aXNpb24iOiAiMzcwYjNhNiIsCiAgInZlcnNpb24iOiAiNC42LjMiCn0K
+image=$(jq -r '.image' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
+branch=$(awk -F ':' '{print $2}' <<< "${image}")
+repo=$(awk -F ':' '{print $1}' <<< "${image}")
+revision=$(jq -r '.revision' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
+revision_status=$(curl -fsL "https://api.github.com/repos/${repo}/compare/${branch}...${revision}" | jq -r 'if (.behind_by | length) != 0 then "(\(.status), by \(.behind_by))" else empty end')
+
 echo "
 $(figlet "hotio")
 Donate:        https://hotio.dev/donate
-Documentation: https://hotio.dev/containers/$(jq -r '.app' <<< "$(echo "${IMAGE_STATS}" | base64 --decode)")
+Documentation: https://hotio.dev$(jq -r 'if .app != "" then "/containers/\(.app)" else empty end' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
 Support:       https://hotio.dev/discord
-Image:         $(jq -r '.image' <<< "$(echo "${IMAGE_STATS}" | base64 --decode)")
-Revision:      $(jq -r '.revision' <<< "$(echo "${IMAGE_STATS}" | base64 --decode)")
-Version:       $(jq -r '.version' <<< "$(echo "${IMAGE_STATS}" | base64 --decode)")
+Image:         ${image}
+Revision:      ${revision} ${revision_status}
+Version:       $(jq -r '.version' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
 
 ----------------------------------------------------------------------
 ENVIRONMENT BASE
