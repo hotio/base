@@ -9,7 +9,7 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
 fi
 
 if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]]; then
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Downloading regions list to \"${CONFIG_DIR}/wireguard/pia-regions.txt\"..."
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Downloading regions list to \"${CONFIG_DIR}/wireguard/pia-regions.txt\"..."
 	curl -fsSL https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -r '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' | awk 'NR<3{print $0;next}{print $0| "sort"}' | column -t -c 3 -s "|" > "${CONFIG_DIR}/wireguard/pia-regions.txt"
 	chown hotio:hotio "${CONFIG_DIR}/wireguard/pia-regions.txt"
 fi
@@ -19,7 +19,7 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "
 fi
 
 if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Trying to get a WireGuard config..."
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Trying to get a WireGuard config..."
 	pia_ipv6="no"
 	for file in /proc/sys/net/ipv6/conf/*; do
 		[[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && pia_ipv6="yes"
@@ -31,25 +31,25 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "
 		jq '.hostname = "'"${wg_hostname}"'" | .ip = "'"${wg_server_ip}"'"' <<< "{}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
 		chown hotio:hotio "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
 		chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] WireGuard config written to \"${CONFIG_DIR}/wireguard/${VPN_CONF}.conf\"."
+		echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] WireGuard config written to \"${CONFIG_DIR}/wireguard/${VPN_CONF}.conf\"."
 	else
 		echo "${output}" > "${CONFIG_DIR}/wireguard/pia.log"
 		chown hotio:hotio "${CONFIG_DIR}/wireguard/pia.log"
-		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Something went wrong trying to get a WireGuard config. See log file \"${CONFIG_DIR}/wireguard/pia.log\". Exiting..."
+		echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Something went wrong trying to get a WireGuard config. See log file \"${CONFIG_DIR}/wireguard/pia.log\". Exiting..."
 		exit 1
 	fi
 fi
 
 if [[ ${VPN_ENABLED} == "true" ]]; then
 	if ! capsh --print | grep -q "Current:.*cap_net_admin"; then
-		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--cap-add=NET_ADMIN] is not set or running with [--privileged=true]. Exiting..."
+		echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--cap-add=NET_ADMIN] is not set or running with [--privileged=true]. Exiting..."
 		echo "Add: --cap-add=NET_ADMIN"
 		echo "Remove: --privileged=true"
 		exit 1
 	fi
 
 	if [[ "$(cat /proc/sys/net/ipv4/conf/all/src_valid_mark)" != "1" ]]; then
-		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv4.conf.all.src_valid_mark=1\"] is not set. Exiting..."
+		echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv4.conf.all.src_valid_mark=1\"] is not set. Exiting..."
 		echo "Add: --sysctl=\"net.ipv4.conf.all.src_valid_mark=1\""
 		exit 1
 	else
@@ -57,18 +57,18 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 	fi
 
 	if [[ "$(cat /proc/sys/net/ipv6/conf/all/disable_ipv6)" != "1" ]]; then
-		echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv6.conf.all.disable_ipv6=1\"] is not set. Consider disabling ipv6."
+		echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv6.conf.all.disable_ipv6=1\"] is not set. Consider disabling ipv6."
 		echo "Add: --sysctl=\"net.ipv6.conf.all.disable_ipv6=1\""
 	fi
 
 	if ip a show docker0 up > /dev/null 2>&1; then
-		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker network type \"host\" is not supported with VPN enabled. Exiting..."
+		echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker network type \"host\" is not supported with VPN enabled. Exiting..."
 		echo "Use: bridge (preferably custom)"
 		exit 1
 	fi
 
 	if [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
-		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuration file \"${CONFIG_DIR}/wireguard/${VPN_CONF}.conf\" was not found. Exiting..."
+		echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuration file \"${CONFIG_DIR}/wireguard/${VPN_CONF}.conf\" was not found. Exiting..."
 		exit 1
 	else
 		chown hotio:hotio "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
@@ -77,20 +77,20 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
 	if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && grep ^DNS "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null; then
 		resolv=$(cat "/etc/resolv.conf")
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Current resolv.conf is:"
+		echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Current resolv.conf is:"
 		echo "${resolv}"
 	fi
 
 	if wg-quick down "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null 2>&1; then
-		echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard is still running. Stopping WireGuard..."
+		echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard is still running. Stopping WireGuard..."
 		sleep 5
 	fi
 
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Starting WireGuard..."
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Starting WireGuard..."
 	if wg-quick up "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"; then
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard is started."
+		echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard is started."
 	else
-		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard failed to start!"
+		echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard failed to start!"
 		exit 1
 	fi
 
@@ -98,7 +98,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 		if ip a show "${VPN_CONF}" up > /dev/null 2>&1; then
 			break
 		else
-			echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Waiting for \"${VPN_CONF}\" interface to come online."
+			echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Waiting for \"${VPN_CONF}\" interface to come online."
 			sleep 5
 		fi
 	done
@@ -106,14 +106,14 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 	if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && grep ^DNS "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null; then
 		echo "${resolv}" >> "/etc/resolv.conf"
 		resolv=$(cat "/etc/resolv.conf")
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] New resolv.conf is:"
+		echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] New resolv.conf is:"
 		echo "${resolv}"
 	fi
 
 	set -e
 
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WebUI ports are \"${WEBUI_PORTS}\"."
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Additional ports are \"${VPN_ADDITIONAL_PORTS}\"."
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WebUI ports are \"${WEBUI_PORTS}\"."
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Additional ports are \"${VPN_ADDITIONAL_PORTS}\"."
 	if [[ -z ${VPN_ADDITIONAL_PORTS} ]]; then
 		VPN_ADDITIONAL_PORTS="${WEBUI_PORTS}"
 	else
@@ -121,34 +121,34 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 	fi
 
 	if [[ "${PRIVOXY_ENABLED}" == true ]]; then
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Additional privoxy ports are \"8118/tcp,8118/udp\"."
+		echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Additional privoxy ports are \"8118/tcp,8118/udp\"."
 		VPN_ADDITIONAL_PORTS+=",8118/tcp,8118/udp"
 	fi
 
 	vpn_endpoint=$(wg show | grep endpoint: | awk '{print $2}')
 	vpn_endpoint_port=${vpn_endpoint##*:}
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard endpoint is \"${vpn_endpoint}\"."
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard endpoint is \"${vpn_endpoint}\"."
 
 	nw_interface=$(ip -o -4 route show to default | awk '{print $5}')
 	nw_gateway=$(ip -o -4 route show to default | awk '{print $3}')
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker network default gateway is \"${nw_gateway}\" on interface \"${nw_interface}\"."
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker network default gateway is \"${nw_gateway}\" on interface \"${nw_interface}\"."
 
 	docker_cidrs=$(ip -o -4 route show proto kernel | awk '{print $1}')
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker networks are \"${docker_cidrs}\"."
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker networks are \"${docker_cidrs}\"."
 
 	IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK}"
 	for lan_network in "${lan_networks[@]}"; do
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Adding \"${lan_network}\" as route via interface \"${nw_interface}\"."
+		echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Adding \"${lan_network}\" as route via interface \"${nw_interface}\"."
 		ip route add "${lan_network}" via "${nw_gateway}" dev "${nw_interface}"
 	done
 
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Adding \"${vpn_endpoint%:*}\" as route via interface \"${nw_interface}\"."
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Adding \"${vpn_endpoint%:*}\" as route via interface \"${nw_interface}\"."
 	ip route add "${vpn_endpoint%:*}" via "${nw_gateway}" dev "${nw_interface}"
 
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ip route overview:"
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ip route overview:"
 	ip route
 
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuring iptables..."
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuring iptables..."
 	iptables -P FORWARD DROP
 
 	iptables -P INPUT DROP
@@ -186,10 +186,10 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 		[[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && ipv6_wanted="true"
 	done
 
-	[[ -z "${ipv6_wanted}" ]] && echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ipv6 is disabled, we will not set ip6tables rules."
+	[[ -z "${ipv6_wanted}" ]] && echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ipv6 is disabled, we will not set ip6tables rules."
 
 	if [[ ${ipv6_wanted} == "true" ]]; then
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuring ip6tables..."
+		echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuring ip6tables..."
 		ip6tables -P FORWARD DROP 1>&- 2>&-
 
 		ip6tables -P INPUT DROP 1>&- 2>&-
@@ -209,16 +209,16 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 		done
 	fi
 
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] iptables overview:"
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] iptables overview:"
 	iptables -S
 	if [[ ${ipv6_wanted} == "true" ]]; then
-		echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ip6tables overview:"
+		echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ip6tables overview:"
 		ip6tables -S
 	fi
 
 	set +e
 
-	echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Internet connectivity test results:"
+	echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Internet connectivity test results:"
 	curl -fsL -4 --retry 5 --retry-max-time 60 wtfismyip.com/json | jq -r '"[IPV4][\(.YourFuckingIPAddress)][\(.YourFuckingLocation)][\(.YourFuckingISP)]"'
 	if [[ ${ipv6_wanted} == "true" ]]; then
 		curl -fsL -6 --retry 5 --retry-max-time 60 wtfismyip.com/json | jq -r '"[IPV6][\(.YourFuckingIPAddress)][\(.YourFuckingLocation)][\(.YourFuckingISP)]"'
