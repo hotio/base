@@ -10,13 +10,13 @@ while true; do
         pf_gateway=$(jq -r '.ip' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.json")
 
         while [[ -z "${pia_token}" ]]; do
-            echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching token..."
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching token..."
             pia_token_response=$(PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} ./get_token.sh)
             if grep -q PIA_TOKEN= <<< "${pia_token_response}" && ! grep -q PIA_TOKEN=null <<< "${pia_token_response}"; then
                 pia_token=$(grep PIA_TOKEN= <<< "${pia_token_response}" | awk -F '=' '{print $2}')
-                echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Token received."
+                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Token received."
             else
-                echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching token failed! Re-trying in 10 seconds..."
+                echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching token failed! Re-trying in 10 seconds..."
                 sleep 10
             fi
         done
@@ -28,7 +28,7 @@ while true; do
             pia_payload_decoded=$(base64 -d <<< "${pia_payload}")
             pia_port=$(jq -r '.port' <<< "${pia_payload_decoded}")
             pia_port_expiration=$(jq -r '.expires_at' <<< "${pia_payload_decoded}")
-            echo "[INFO] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Forwarded port is \"${pia_port}\", will expire at \"${pia_port_expiration}\"."
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Forwarded port is \"${pia_port}\", will expire at \"${pia_port_expiration}\"."
             touch "${CONFIG_DIR}/wireguard/forwarded_port"
             old_port=$(cat "${CONFIG_DIR}/wireguard/forwarded_port")
             if [[ "${pia_port}" != "${old_port}" ]]; then
@@ -39,17 +39,17 @@ while true; do
             while [[ $(date -d "${pia_port_expiration}" +%s) -gt $(date -d "$(date)" +%s) ]]; do
                 bind_port_response="$(curl --interface "${VPN_CONF}" -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
                 if ! [[ $(jq -r '.status' <<< "${bind_port_response}") == "OK" ]]; then
-                    echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind failed!"
+                    echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind failed!"
                     break
                 fi
                 sleep 900
             done
         else
-            echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Signature and Payload retrieval failed!"
+            echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Signature and Payload retrieval failed!"
         fi
         sleep 60
     else
-        echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] File \"${CONFIG_DIR}/wireguard/${VPN_CONF}.json\" not found! Checking again in 60 seconds..."
+        echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] File \"${CONFIG_DIR}/wireguard/${VPN_CONF}.json\" not found! Checking again in 60 seconds..."
         sleep 60
     fi
 done
