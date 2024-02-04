@@ -41,24 +41,24 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "
 fi
 
 if [[ ${VPN_ENABLED} == "true" ]]; then
-
 	if ! capsh --print | grep -q "Current:.*cap_net_admin"; then
-		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Capability \"NET_ADMIN\" is not set. Exiting..."
-		echo "Use: --cap-add=NET_ADMIN"
+		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--cap-add=NET_ADMIN] is not set or running with [--privileged=true]. Exiting..."
+		echo "Add: --cap-add=NET_ADMIN"
+		echo "Remove: --privileged=true"
 		exit 1
 	fi
 
 	if [[ "$(cat /proc/sys/net/ipv4/conf/all/src_valid_mark)" != "1" ]]; then
-		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Sysctl \"net.ipv4.conf.all.src_valid_mark=1\" is not set. Exiting..."
-		echo "Use: --sysctl=\"net.ipv4.conf.all.src_valid_mark=1\""
+		echo "[ERROR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv4.conf.all.src_valid_mark=1\"] is not set. Exiting..."
+		echo "Add: --sysctl=\"net.ipv4.conf.all.src_valid_mark=1\""
 		exit 1
 	else
 		sed -i "s:sysctl -q net.ipv4.conf.all.src_valid_mark=1:echo skipping setting net.ipv4.conf.all.src_valid_mark:" /usr/bin/wg-quick
 	fi
 
 	if [[ "$(cat /proc/sys/net/ipv6/conf/all/disable_ipv6)" != "1" ]]; then
-		echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Sysctl \"net.ipv6.conf.all.disable_ipv6=1\" is not set. Consider disabling ipv6."
-		echo "Use: --sysctl=\"net.ipv6.conf.all.disable_ipv6=1\""
+		echo "[WARNING] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv6.conf.all.disable_ipv6=1\"] is not set. Consider disabling ipv6."
+		echo "Add: --sysctl=\"net.ipv6.conf.all.disable_ipv6=1\""
 	fi
 
 	if ip a show docker0 up > /dev/null 2>&1; then
