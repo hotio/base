@@ -59,4 +59,4 @@ groupmod -o -g "${PGID}" hotio
 
 echo "Applying permissions to ${CONFIG_DIR}"
 chmod "=rwx" "${CONFIG_DIR}"
-chown hotio:hotio "${CONFIG_DIR}"
+find "${CONFIG_DIR}" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
