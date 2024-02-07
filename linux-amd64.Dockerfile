@@ -48,11 +48,11 @@ RUN apk add --no-cache privoxy iptables ip6tables iproute2 openresolv wireguard-
 COPY --from=builder /usr/bin/unrar /usr/bin/
 
 # https://github.com/just-containers/s6-overlay/releases
-ARG S6_VERSION=3.1.6.2
-RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-noarch.tar.xz" | tar Jpxf - -C / && \
-    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-x86_64.tar.xz" | tar Jpxf - -C / && \
-    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-symlinks-noarch.tar.xz" | tar Jpxf - -C / && \
-    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_VERSION}/s6-overlay-symlinks-arch.tar.xz" | tar Jpxf - -C /
+ARG VERSION_S6
+RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${VERSION_S6}/s6-overlay-noarch.tar.xz" | tar Jpxf - -C / && \
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${VERSION_S6}/s6-overlay-x86_64.tar.xz" | tar Jpxf - -C / && \
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${VERSION_S6}/s6-overlay-symlinks-noarch.tar.xz" | tar Jpxf - -C / && \
+    curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${VERSION_S6}/s6-overlay-symlinks-arch.tar.xz" | tar Jpxf - -C /
 
 # make folders
 RUN mkdir "${APP_DIR}" && \
@@ -61,9 +61,9 @@ RUN mkdir "${APP_DIR}" && \
     useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
     usermod -G users hotio
 
-ARG PIA_VERSION
+ARG VERSION_PIA
 RUN mkdir "${APP_DIR}/pia-scripts" && \
-    wget -O - "https://github.com/pia-foss/manual-connections/archive/${PIA_VERSION}.tar.gz" | tar xzf - -C "${APP_DIR}/pia-scripts" --strip-components=1 && \
+    wget -O - "https://github.com/pia-foss/manual-connections/archive/${VERSION_PIA}.tar.gz" | tar xzf - -C "${APP_DIR}/pia-scripts" --strip-components=1 && \
     chmod -R u=rwX,go=rX "${APP_DIR}/pia-scripts"
 
 COPY root/ /
