@@ -1,8 +1,8 @@
 {
   "description": "Alpine 3.18",
-  "upstream_image": "alpine",
-  "upstream_tag": "3.18",
+  "pia_version": "e956c57849a38f912e654e0357f5ae456dfd1742",
   "upstream_digest_amd64": "sha256:695ae78b4957fef4e53adc51febd07f5401eb36fcd80fff3e5107a2b4aa42ace",
   "upstream_digest_arm64": "sha256:24b42af5b7bdb9ccf1252e508ee0a4fd85eb3286a4596c422739ae6beb3038f4",
-  "pia_version": "e956c57849a38f912e654e0357f5ae456dfd1742"
+  "upstream_image": "alpine",
+  "upstream_tag": "3.18"
 }
