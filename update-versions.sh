@@ -7,9 +7,4 @@ jq --sort-keys \
     --arg version_s6 "${version_s6//v/}" \
     '.version_pia = $version_pia | .version_s6 = $version_s6' <<< "${json}" | tee VERSION.json
 
-if ! git diff --quiet; then
-    json=$(cat VERSION.json)
-    jq --sort-keys \
-        --arg version "$(date -u +'%Y%m%d%H%M%S')" \
-        '.version = $version' <<< "${json}" | tee VERSION.json
-fi
+[[ -f update-self-version.sh ]] && bash ./update-self-version.sh
