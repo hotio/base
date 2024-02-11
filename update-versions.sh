@@ -6,5 +6,3 @@ jq --sort-keys \
     --arg version_pia "${version_pia//v/}" \
     --arg version_s6 "${version_s6//v/}" \
     '.version_pia = $version_pia | .version_s6 = $version_s6' <<< "${json}" | tee VERSION.json
-
-[[ -f update-self-version.sh ]] && bash ./update-self-version.sh
