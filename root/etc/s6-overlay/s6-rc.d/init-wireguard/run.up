@@ -48,13 +48,16 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         exit 1
     fi
 
-    if [[ "$(cat /proc/sys/net/ipv4/conf/all/src_valid_mark)" != "1" ]]; then
-        echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv4.conf.all.src_valid_mark=1\"] is not set. Exiting..."
+    unset rp_filter_strict
+    for file in /proc/sys/net/ipv4/conf/*; do
+        [[ "$(cat "/proc/sys/net/ipv4/conf/${file##*/}/rp_filter")" != "0" ]] && rp_filter_strict="true"
+    done
+    if [[ "${rp_filter_strict}" == "true" ]] && [[ "$(cat /proc/sys/net/ipv4/conf/all/src_valid_mark)" != "1" ]]; then
+        echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv4.conf.all.src_valid_mark=1\"] is not set and \"rp_filter\" is set to \"strict\". Exiting..."
         echo "Add: --sysctl=\"net.ipv4.conf.all.src_valid_mark=1\""
         exit 1
-    else
-        sed -i "s:sysctl -q net.ipv4.conf.all.src_valid_mark=1:echo skipping setting net.ipv4.conf.all.src_valid_mark:" /usr/bin/wg-quick
     fi
+    sed -i "s:sysctl -q net.ipv4.conf.all.src_valid_mark=1:echo skipping setting net.ipv4.conf.all.src_valid_mark:" /usr/bin/wg-quick
 
     if [[ "$(cat /proc/sys/net/ipv6/conf/all/disable_ipv6)" != "1" ]]; then
         echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv6.conf.all.disable_ipv6=1\"] is not set. Consider disabling ipv6."
