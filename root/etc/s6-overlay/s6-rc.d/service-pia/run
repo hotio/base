@@ -21,7 +21,7 @@ while true; do
             fi
         done
 
-        pia_response=$(curl --interface "${VPN_CONF}" -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "token=${pia_token}" "https://${pf_hostname}:19999/getSignature")
+        pia_response=$(curl --retry 5 --retry-max-time 60 --interface "${VPN_CONF}" -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "token=${pia_token}" "https://${pf_hostname}:19999/getSignature")
         if [[ $(echo "${pia_response}" | jq -r '.status') == "OK" ]]; then
             pia_payload=$(jq -r '.payload' <<< "${pia_response}")
             pia_signature=$(jq -r '.signature' <<< "${pia_response}")
@@ -37,7 +37,7 @@ while true; do
                 source "${APP_DIR}/forwarded_port_update_app"
             fi
             while [[ $(date -d "${pia_port_expiration}" +%s) -gt $(date -d "$(date)" +%s) ]]; do
-                bind_port_response="$(curl --interface "${VPN_CONF}" -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
+                bind_port_response="$(curl --retry 5 --retry-max-time 60 --interface "${VPN_CONF}" -Gs -m 5 --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
                 if ! [[ $(jq -r '.status' <<< "${bind_port_response}") == "OK" ]]; then
                     echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind failed!"
                     break

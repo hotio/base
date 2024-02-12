@@ -10,7 +10,7 @@ fi
 
 if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Downloading regions list to \"${CONFIG_DIR}/wireguard/pia-regions.txt\"..."
-    curl -fsSL https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -r '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' | awk 'NR<3{print $0;next}{print $0| "sort"}' | column -t -c 3 -s "|" > "${CONFIG_DIR}/wireguard/pia-regions.txt"
+    curl -fsSL --retry 5 --retry-max-time 60 https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -r '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' | awk 'NR<3{print $0;next}{print $0| "sort"}' | column -t -c 3 -s "|" > "${CONFIG_DIR}/wireguard/pia-regions.txt"
     find "${CONFIG_DIR}/wireguard/pia-regions.txt" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
 fi
 
