@@ -45,6 +45,7 @@ VPN_KEEP_LOCAL_DNS=${VPN_KEEP_LOCAL_DNS}
 VPN_PIA_USER=$(mask "${VPN_PIA_USER}")
 VPN_PIA_PASS=$(mask "${VPN_PIA_PASS}")
 VPN_PIA_PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION}
+VPN_PIA_DIP_TOKEN=$(mask "${VPN_PIA_DIP_TOKEN}")
 PRIVOXY_ENABLED=${PRIVOXY_ENABLED}
 ----------------------------------------------------------------------
 "
