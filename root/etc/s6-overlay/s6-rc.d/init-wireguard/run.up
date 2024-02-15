@@ -117,22 +117,25 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     vpn_endpoint=$(wg show | grep endpoint: | awk '{print $2}')
     vpn_endpoint_port=${vpn_endpoint##*:}
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard endpoint is [${vpn_endpoint}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard [${VPN_CONF}] endpoint is [${vpn_endpoint}]."
+
+    vpn_allowedips=$(wg show | grep 'allowed ips:' | awk '{print $3}')
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard [${VPN_CONF}] allowed ips is [${vpn_allowedips}]."
 
     nw_interface=$(ip -o -4 route show to default | awk '{print $5}')
     nw_gateway=$(ip -o -4 route show to default | awk '{print $3}')
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker network default gateway is [${nw_gateway}] on interface [${nw_interface}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Default gateway is [${nw_gateway}] on interface [${nw_interface}]."
 
     docker_cidrs=$(ip -o -4 route show proto kernel | awk '{print $1}')
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker networks are [${docker_cidrs}]."
 
-    IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK}"
+    IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
     for lan_network in "${lan_networks[@]}"; do
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Adding [${lan_network}] as route via interface [${nw_interface}]."
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Adding [${lan_network}][LAN] as route via interface [${nw_interface}]."
         ip route add "${lan_network}" via "${nw_gateway}" dev "${nw_interface}"
     done
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Adding [${vpn_endpoint%:*}] as route via interface [${nw_interface}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Adding [${vpn_endpoint%:*}][${VPN_CONF}] as route via interface [${nw_interface}]."
     ip route add "${vpn_endpoint%:*}" via "${nw_gateway}" dev "${nw_interface}"
 
     if [[ "${PRIVOXY_ENABLED}" == true ]]; then
