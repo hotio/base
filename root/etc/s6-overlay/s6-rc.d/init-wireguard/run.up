@@ -124,7 +124,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     nw_interface=$(ip -o -4 route show to default | awk '{print $5}')
     nw_gateway=$(ip -o -4 route show to default | awk '{print $3}')
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Default gateway is [${nw_gateway}] on interface [${nw_interface}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Default gateway is [${nw_gateway}] via interface [${nw_interface}]."
 
     docker_cidrs=$(ip -o -4 route show proto kernel | awk '{print $1}')
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker networks are [${docker_cidrs}]."
