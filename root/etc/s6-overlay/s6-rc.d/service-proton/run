@@ -8,7 +8,7 @@ vpn_gw="${vpn_gw%.*}.1"
 
 while true; do
     if ! natpmpc -g "${vpn_gw}" &> /dev/null; then
-        echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Endpoint \"${vpn_gw%.*}.1\" does not support port forwarding!"
+        echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Endpoint [${vpn_gw%.*}.1] does not support port forwarding!"
     else
         port=$(natpmpc -g "${vpn_gw}" -a 1 0 udp 60 | grep -P -o -m 1 '(?<=Mapped public port\s)\d+')
         if [[ -n "${port}" ]]; then
@@ -16,7 +16,7 @@ while true; do
             touch "${CONFIG_DIR}/wireguard/forwarded_port"
             old_port=$(cat "${CONFIG_DIR}/wireguard/forwarded_port")
             if [[ "${port}" != "${old_port}" ]]; then
-                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Forwarded port is \"${port}\"."
+                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Forwarded port is [${port}]."
                 echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
                 # shellcheck source=/dev/null
                 source "${APP_DIR}/forwarded_port_update_app"
