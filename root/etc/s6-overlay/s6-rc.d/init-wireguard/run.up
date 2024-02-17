@@ -160,13 +160,13 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         open_ports+="${port},"
     done
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports opened on [${nw_interface}] and closed on [${VPN_CONF}] are [${open_ports%,}]."
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports internally forwarded to [${VPN_AUTO_PORT_FORWARD_TO_PORTS}] and staying open on [${VPN_CONF}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected ports [${VPN_AUTO_PORT_FORWARD_TO_PORTS}] that stay open on [${VPN_CONF}]."
 
     re='^[0-9]+$'
     if [[ "${VPN_AUTO_PORT_FORWARD}" =~ $re ]] ; then
         echo "${VPN_AUTO_PORT_FORWARD}" > "${CONFIG_DIR}/wireguard/forwarded_port"
         echo "changed" >> "${CONFIG_DIR}/wireguard/forwarded_port"
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Port [${VPN_AUTO_PORT_FORWARD}] to be internally forwarded."
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Manually forwarded port is [${VPN_AUTO_PORT_FORWARD}]."
     fi
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ip route overview:"
