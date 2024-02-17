@@ -14,9 +14,11 @@ while true; do
             ip6tables -t nat -F PREROUTING
             IFS=',' read -ra forward_ports <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS%,}"
             for forward_port in "${forward_ports[@]}"; do
-                iptables -t nat -A PREROUTING -i "${VPN_CONF}" -p "${forward_port##*/}" --dport "${port}" -j REDIRECT --to-ports "${forward_port%/*}"
-                ip6tables -t nat -A PREROUTING -i "${VPN_CONF}" -p "${forward_port##*/}" --dport "${port}" -j REDIRECT --to-ports "${forward_port%/*}"
-                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Internally forwarded port [${port}/${forward_port##*/}] to [${forward_port%/*}/${forward_port##*/}]."
+                if [[ "${forward_port%/*}" != "${port}" ]]; then
+                    iptables -t nat -A PREROUTING -i "${VPN_CONF}" -p "${forward_port##*/}" --dport "${port}" -j REDIRECT --to-ports "${forward_port%/*}"
+                    ip6tables -t nat -A PREROUTING -i "${VPN_CONF}" -p "${forward_port##*/}" --dport "${port}" -j REDIRECT --to-ports "${forward_port%/*}"
+                    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Internally forwarded port [${port}/${forward_port##*/}] to [${forward_port%/*}/${forward_port##*/}]."
+                fi
             done
             # shellcheck source=/dev/null
             source "${APP_DIR}/forwarded_port_update_app"
