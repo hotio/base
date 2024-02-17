@@ -18,7 +18,7 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "
     rm -rf "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
 fi
 
-if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
+if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Trying to get a WireGuard config..."
     pia_ipv6="no"
     for file in /proc/sys/net/ipv6/conf/*; do
