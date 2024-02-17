@@ -18,8 +18,7 @@ while true; do
             if [[ "${port}" != "${old_port}" ]]; then
                 echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Forwarded port is [${port}]."
                 echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
-                # shellcheck source=/dev/null
-                source "${APP_DIR}/forwarded_port_update_app"
+                echo "changed" >> "${CONFIG_DIR}/wireguard/forwarded_port"
             fi
         else
             echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Port forwarding failed!"

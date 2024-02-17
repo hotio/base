@@ -1,0 +1,26 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+umask "${UMASK}"
+
+sleep 10
+
+while true; do
+    if [[ -f "${CONFIG_DIR}/wireguard/forwarded_port" ]]; then
+        port=$(sed -n '1p' "${CONFIG_DIR}/wireguard/forwarded_port")
+        status=$(sed -n '2p' "${CONFIG_DIR}/wireguard/forwarded_port")
+        if [[ "${status}" == "changed" ]]; then
+            iptables -t nat -F PREROUTING
+            ip6tables -t nat -F PREROUTING
+            IFS=',' read -ra forward_ports <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS%,}"
+            for forward_port in "${forward_ports[@]}"; do
+                iptables -t nat -A PREROUTING -i "${VPN_CONF}" -p "${forward_port##*/}" --dport "${port}" -j REDIRECT --to-ports "${forward_port%/*}"
+                ip6tables -t nat -A PREROUTING -i "${VPN_CONF}" -p "${forward_port##*/}" --dport "${port}" -j REDIRECT --to-ports "${forward_port%/*}"
+                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Internally forwarded port [${port}/${forward_port##*/}] to [${forward_port%/*}/${forward_port##*/}]."
+            done
+            echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
+            echo "updated" >> "${CONFIG_DIR}/wireguard/forwarded_port"
+        fi
+    fi
+    sleep 60
+done

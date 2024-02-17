@@ -26,8 +26,8 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "
     done
     cd "${APP_DIR}/pia-scripts"
     if output=$(PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION} DISABLE_IPV6=${pia_ipv6} AUTOCONNECT="" PIA_CONNECT="false" PIA_PF="${VPN_AUTO_PORT_FORWARD}" VPN_PROTOCOL=wireguard PIA_CONF_PATH="${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" DIP_TOKEN="${VPN_PIA_DIP_TOKEN}" PIA_DNS=true timeout 60s "./run_setup.sh"); then
-        wg_hostname=$(grep -Po '(?<=WG_HOSTNAME=)[^ ]+' <<< "${output}")
-        wg_server_ip=$(grep -Po '(?<=WG_SERVER_IP=)[^ ]+' <<< "${output}")
+        wg_hostname=$(grep -Po -m 1 '(?<=WG_HOSTNAME=)[^ ]+' <<< "${output}")
+        wg_server_ip=$(grep -Po -m 1 '(?<=WG_SERVER_IP=)[^ ]+' <<< "${output}")
         jq '.hostname = "'"${wg_hostname}"'" | .ip = "'"${wg_server_ip}"'"' <<< "{}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
         find "${CONFIG_DIR}/wireguard/${VPN_CONF}.json" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
         chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
@@ -147,6 +147,10 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     for port in "${ports[@]}"; do
         open_ports+="${port},"
     done
+    IFS=',' read -ra ports <<< "${VPN_EXPOSE_PORTS_ON_LAN%,}"
+    for port in "${ports[@]}"; do
+        open_ports+="${port},"
+    done
     IFS=',' read -ra ports <<< "${VPN_ADDITIONAL_PORTS%,}"
     for port in "${ports[@]}"; do
         open_ports+="${port},"
@@ -156,6 +160,14 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         open_ports+="${port},"
     done
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports opened on [${nw_interface}] and closed on [${VPN_CONF}] are [${open_ports%,}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports internally forwarded to [${VPN_AUTO_PORT_FORWARD_TO_PORTS}] and staying open on [${VPN_CONF}]."
+
+    re='^[0-9]+$'
+    if [[ "${VPN_AUTO_PORT_FORWARD}" =~ $re ]] ; then
+        echo "${VPN_AUTO_PORT_FORWARD}" > "${CONFIG_DIR}/wireguard/forwarded_port"
+        echo "changed" >> "${CONFIG_DIR}/wireguard/forwarded_port"
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Port [${VPN_AUTO_PORT_FORWARD}] to be internally forwarded."
+    fi
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ip route overview:"
     ip route
@@ -175,6 +187,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     IFS=',' read -ra additional_ports <<< "${open_ports%,}"
     for additional_port in "${additional_ports[@]}"; do
         iptables -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
+        grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
         iptables -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
     done
 
@@ -190,6 +203,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     IFS=',' read -ra additional_ports <<< "${open_ports%,}"
     for additional_port in "${additional_ports[@]}"; do
         iptables -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
+        grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
         iptables -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
     done
 
@@ -209,6 +223,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         ip6tables -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
+            grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             ip6tables -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
         done
 
@@ -217,6 +232,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         ip6tables -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
+            grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             ip6tables -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
         done
     fi
