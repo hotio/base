@@ -76,6 +76,9 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     else
         find "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
         chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
+        if [[ "${VPN_CONF}" != *"-nofix" ]]; then
+            sed -i 's#0.0.0.0/0#0.0.0.0/1,128.0.0.0/1#g' "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
+        fi
     fi
 
     if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && grep ^DNS "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null; then
@@ -119,7 +122,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     vpn_endpoint_port=${vpn_endpoint##*:}
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard [${VPN_CONF}] endpoint is [${vpn_endpoint}]."
 
-    vpn_allowedips=$(wg show | grep 'allowed ips:' | awk '{print $3}')
+    vpn_allowedips=$(wg show | grep 'allowed ips:' | awk -F ': ' '{print $2}')
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard [${VPN_CONF}] allowed ips is [${vpn_allowedips}]."
 
     nw_interface=$(ip -o -4 route show to default | awk '{print $5}')
@@ -135,8 +138,10 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         ip route add "${lan_network}" via "${nw_gateway}" dev "${nw_interface}"
     done
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Adding [${vpn_endpoint%:*}][${VPN_CONF}] as route via interface [${nw_interface}]."
-    ip route add "${vpn_endpoint%:*}" via "${nw_gateway}" dev "${nw_interface}"
+    if [[ "${VPN_CONF}" != *"-nofix" ]]; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Adding [${vpn_endpoint%:*}][${VPN_CONF}] as route via interface [${nw_interface}]."
+        ip route add "${vpn_endpoint%:*}" via "${nw_gateway}" dev "${nw_interface}"
+    fi
 
     if [[ "${PRIVOXY_ENABLED}" == true ]]; then
         PRIVOXY_PORT=$(grep 'listen-address' "${CONFIG_DIR}/privoxy/privoxy.conf" | sed 's/^.*://')
