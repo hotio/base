@@ -1,4 +1,6 @@
 #!/command/with-contenv bash
 # shellcheck shell=bash
 
-rm -rf "${CONFIG_DIR}/wireguard/forwarded_port"
+port=$(sed -n '1p' "${CONFIG_DIR}/wireguard/forwarded_port")
+echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
+echo "changed" >> "${CONFIG_DIR}/wireguard/forwarded_port"
