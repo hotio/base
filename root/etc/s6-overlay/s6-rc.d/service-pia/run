@@ -40,8 +40,7 @@ while true; do
             old_port=$(cat "${CONFIG_DIR}/wireguard/forwarded_port")
             if [[ "${pia_port}" != "${old_port}" ]]; then
                 echo "${pia_port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
-                # shellcheck source=/dev/null
-                source "${APP_DIR}/forwarded_port_update_app"
+                echo "changed" >> "${CONFIG_DIR}/wireguard/forwarded_port"
             fi
             while [[ $(date -d "${pia_port_expiration}" +%s) -gt $(date -d "$(date)" +%s) ]]; do
                 bind_port_response="$(curl --retry 5 --retry-max-time 60 --max-time 10 --interface "${VPN_CONF}" -Gs --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
