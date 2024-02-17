@@ -18,6 +18,8 @@ while true; do
                 ip6tables -t nat -A PREROUTING -i "${VPN_CONF}" -p "${forward_port##*/}" --dport "${port}" -j REDIRECT --to-ports "${forward_port%/*}"
                 echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Internally forwarded port [${port}/${forward_port##*/}] to [${forward_port%/*}/${forward_port##*/}]."
             done
+            # shellcheck source=/dev/null
+            source "${APP_DIR}/forwarded_port_update_app"
             echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
             echo "updated" >> "${CONFIG_DIR}/wireguard/forwarded_port"
         fi
