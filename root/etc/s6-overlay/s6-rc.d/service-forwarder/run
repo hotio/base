@@ -3,6 +3,11 @@
 
 umask "${UMASK}"
 
+unset ipv6_wanted
+for file in /proc/sys/net/ipv6/conf/*; do
+    [[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && ipv6_wanted="true"
+done
+
 sleep 10
 
 while true; do
@@ -21,7 +26,9 @@ while true; do
                 protocol="${internal_port_proto##*/}"
                 if [[ "${external_port}" != "${internal_port}" ]]; then
                     iptables -t nat -A PREROUTING -i "${VPN_CONF}" -p "${protocol}" --dport "${external_port}" -j REDIRECT --to-ports "${internal_port}"
-                    ip6tables -t nat -A PREROUTING -i "${VPN_CONF}" -p "${protocol}" --dport "${external_port}" -j REDIRECT --to-ports "${internal_port}"
+                    if [[ ${ipv6_wanted} == "true" ]]; then
+                        ip6tables -t nat -A PREROUTING -i "${VPN_CONF}" -p "${protocol}" --dport "${external_port}" -j REDIRECT --to-ports "${internal_port}"
+                    fi
                     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected port [${external_port}/${protocol}] to [${internal_port}/${protocol}]."
                 fi
             done
