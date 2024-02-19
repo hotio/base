@@ -148,8 +148,14 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     for port in "${ports[@]}"; do
         open_ports+="${port},"
     done
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports opened on [${nw_interface}] and closed on [${VPN_CONF}] are [${open_ports%,}]."
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected ports [${VPN_AUTO_PORT_FORWARD_TO_PORTS}] that stay open on [${VPN_CONF}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports opened on [${nw_interface}] are [${open_ports%,}]."
+    IFS=',' read -ra ports <<< "${open_ports%,}"
+    for port in "${ports[@]}"; do
+        grep -q "${port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
+        closed_ports+="${port},"
+    done
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports closed on [${VPN_CONF}] are [${closed_ports%,}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports redirected on [${VPN_CONF}] are [${VPN_AUTO_PORT_FORWARD_TO_PORTS%,}]."
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ip route overview:"
     ip route
