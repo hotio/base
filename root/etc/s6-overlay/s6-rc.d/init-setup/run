@@ -19,7 +19,7 @@ revision=$(jq -r '.revision' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
 latest_revision=$(curl -fsL --max-time 10 "https://raw.githubusercontent.com/${repo}/master/tags.json" | jq -r '.'"${branch}"'.tags[2]' 2> /dev/null | awk -F '-' '{print $2}')
 revision_status=$(curl -fsL --max-time 10 "https://api.github.com/repos/${repo}/compare/${latest_revision}...${revision}" | jq -r 'if (.behind_by | length) != 0 then "(\(.status), by \(.behind_by))" else empty end')
 
-echo "
+echo -ne "
 $(figlet "hotio")
 Donate:        https://hotio.dev/donate
 Documentation: https://hotio.dev$(jq -r 'if .app != "" then "/containers/\(.app)" else empty end' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
@@ -35,7 +35,9 @@ PUID=${PUID}
 PGID=${PGID}
 UMASK=${UMASK}
 TZ=${TZ}
-VPN_ENABLED=${VPN_ENABLED}
+PRIVOXY_ENABLED=${PRIVOXY_ENABLED}
+VPN_ENABLED=${VPN_ENABLED}"
+[[ ${VPN_ENABLED} == true ]] && echo -ne "
 VPN_CONF=${VPN_CONF}
 VPN_PROVIDER=${VPN_PROVIDER}
 VPN_LAN_NETWORK=${VPN_LAN_NETWORK}
@@ -47,9 +49,10 @@ VPN_PIA_USER=$(mask "${VPN_PIA_USER}")
 VPN_PIA_PASS=$(mask "${VPN_PIA_PASS}")
 VPN_PIA_PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION}
 VPN_PIA_DIP_TOKEN=$([[ ${VPN_PIA_DIP_TOKEN} != "no" ]] && mask "${VPN_PIA_DIP_TOKEN}" || echo "${VPN_PIA_DIP_TOKEN}")
-VPN_PIA_PORT_FORWARD_PERSIST=${VPN_PIA_PORT_FORWARD_PERSIST}
-PRIVOXY_ENABLED=${PRIVOXY_ENABLED}
+VPN_PIA_PORT_FORWARD_PERSIST=${VPN_PIA_PORT_FORWARD_PERSIST}"
+echo -ne "
 ----------------------------------------------------------------------
+
 "
 
 echo "Executing usermod..."
