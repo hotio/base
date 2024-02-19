@@ -13,13 +13,7 @@ while true; do
         port=$(natpmpc -g "${vpn_gw}" -a 1 0 udp 60 | grep -P -o -m 1 '(?<=Mapped public port\s)\d+')
         if [[ -n "${port}" ]]; then
             natpmpc -g "${vpn_gw}" -a 1 0 tcp 60 &> /dev/null
-            touch "${CONFIG_DIR}/wireguard/forwarded_port"
-            old_port=$(cat "${CONFIG_DIR}/wireguard/forwarded_port")
-            if [[ "${port}" != "${old_port}" ]]; then
-                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Forwarded port is [${port}]."
-                echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
-                echo "changed" >> "${CONFIG_DIR}/wireguard/forwarded_port"
-            fi
+            echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
         else
             echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Port forwarding failed!"
         fi
