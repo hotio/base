@@ -16,7 +16,3 @@ fi
 if [[ "${VPN_PROVIDER}" != "pia" ]] || [[ "${VPN_ENABLED}" != true ]] || [[ "${VPN_AUTO_PORT_FORWARD}" != true ]]; then
     rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-pia
 fi
-
-if [[ "${VPN_AUTO_PORT_FORWARD}" == false ]]; then
-    rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-forwarder
-fi

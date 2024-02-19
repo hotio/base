@@ -4,37 +4,21 @@
 umask "${UMASK}"
 
 if [[ ${VPN_ENABLED} == "true" ]] && [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
-    mkdir -p "${CONFIG_DIR}/wireguard"
+    mkdir "${CONFIG_DIR}/wireguard"
     find "${CONFIG_DIR}/wireguard" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
 fi
 
-if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "${CONFIG_DIR}/wireguard/pia-regions.txt" ]]; then
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Downloading regions list to [${CONFIG_DIR}/wireguard/pia-regions.txt]..."
-    curl -fsSL --retry 5 --retry-max-time 60 --max-time 10 https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -r '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' | awk 'NR<3{print $0;next}{print $0| "sort"}' | column -t -c 3 -s "|" > "${CONFIG_DIR}/wireguard/pia-regions.txt"
-    find "${CONFIG_DIR}/wireguard/pia-regions.txt" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
-fi
-
-if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]] && [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.json" ]]; then
-    rm -rf "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
-fi
-
 if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]]; then
+    if [[ ! -f "${CONFIG_DIR}/wireguard/pia-regions.txt" ]]; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Downloading regions list to [${CONFIG_DIR}/wireguard/pia-regions.txt]..."
+        curl -fsSL --retry 5 --retry-max-time 60 --max-time 10 https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -r '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' | awk 'NR<3{print $0;next}{print $0| "sort"}' | column -t -c 3 -s "|" > "${CONFIG_DIR}/wireguard/pia-regions.txt"
+        find "${CONFIG_DIR}/wireguard/pia-regions.txt" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
+    fi
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Trying to get a WireGuard config..."
-    pia_ipv6="no"
-    for file in /proc/sys/net/ipv6/conf/*; do
-        [[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && pia_ipv6="yes"
-    done
     cd "${APP_DIR}/pia-scripts"
-    if output=$(PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION} DISABLE_IPV6=${pia_ipv6} AUTOCONNECT="" PIA_CONNECT="false" PIA_PF="${VPN_AUTO_PORT_FORWARD}" VPN_PROTOCOL=wireguard PIA_CONF_PATH="${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" DIP_TOKEN="${VPN_PIA_DIP_TOKEN}" PIA_DNS=true timeout 60s "./run_setup.sh"); then
-        wg_hostname=$(grep -Po -m 1 '(?<=WG_HOSTNAME=)[^ ]+' <<< "${output}")
-        wg_server_ip=$(grep -Po -m 1 '(?<=WG_SERVER_IP=)[^ ]+' <<< "${output}")
-        jq '.hostname = "'"${wg_hostname}"'" | .ip = "'"${wg_server_ip}"'"' <<< "{}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
-        find "${CONFIG_DIR}/wireguard/${VPN_CONF}.json" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
-        chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
+    if PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION} DISABLE_IPV6="no" AUTOCONNECT="" PIA_CONNECT="false" PIA_PF="${VPN_AUTO_PORT_FORWARD}" VPN_PROTOCOL=wireguard PIA_CONF_PATH="${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" DIP_TOKEN="${VPN_PIA_DIP_TOKEN}" PIA_DNS=true timeout 60s "./run_setup.sh" > "${CONFIG_DIR}/wireguard/pia.log" 2>&1; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] WireGuard config written to [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf]."
     else
-        echo "${output}" > "${CONFIG_DIR}/wireguard/pia.log"
-        find "${CONFIG_DIR}/wireguard/pia.log" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
         echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Something went wrong trying to get a WireGuard config. See log file [${CONFIG_DIR}/wireguard/pia.log]. Exiting..."
         exit 1
     fi
@@ -166,13 +150,6 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     done
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports opened on [${nw_interface}] and closed on [${VPN_CONF}] are [${open_ports%,}]."
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected ports [${VPN_AUTO_PORT_FORWARD_TO_PORTS}] that stay open on [${VPN_CONF}]."
-
-    re='^[0-9]+$'
-    if [[ "${VPN_AUTO_PORT_FORWARD}" =~ $re ]] ; then
-        echo "${VPN_AUTO_PORT_FORWARD}" > "${CONFIG_DIR}/wireguard/forwarded_port"
-        echo "changed" >> "${CONFIG_DIR}/wireguard/forwarded_port"
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Manually forwarded port is [${VPN_AUTO_PORT_FORWARD}]."
-    fi
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ip route overview:"
     ip route
