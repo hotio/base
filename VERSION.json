@@ -4,7 +4,6 @@
   "upstream_digest_arm64": "sha256:ca165754e2f953a4f686409b1eb5855212f42a252462c9c50bbc3077f3b9a654",
   "upstream_image": "ubuntu",
   "upstream_tag": "22.04",
-  "version": "3.1.6.2--e956c57",
-  "version_pia": "e956c57849a38f912e654e0357f5ae456dfd1742",
+  "version": "3.1.6.2",
   "version_s6": "3.1.6.2"
 }
