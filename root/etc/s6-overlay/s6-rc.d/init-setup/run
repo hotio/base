@@ -27,7 +27,7 @@ Support:       https://hotio.dev/discord
 Image:         ${image}
 Revision:      ${revision} ${revision_status}
 Version:       $(jq -r '.version' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
-OS:            $(uname -s) $(uname -r) $(uname -i)
+OS:            $(uname -s) $(uname -r) $(uname -m)
 
 ----------------------------------------------------------------------
 ENVIRONMENT BASE
