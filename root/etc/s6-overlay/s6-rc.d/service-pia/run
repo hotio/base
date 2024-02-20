@@ -3,46 +3,47 @@
 
 umask "${UMASK}"
 
-pia_token=$(grep -m 1 PIA_TOKEN= < "${CONFIG_DIR}/wireguard/pia.log" | awk -F '=' '{print $2}')
-
 while true; do
-    if [[ -f "${CONFIG_DIR}/wireguard/pia.log" ]]; then
-        cd "${APP_DIR}/pia-scripts" || exit 1
-        pf_hostname=$(grep -Po -m 1 '(?<=WG_HOSTNAME=)[^ ]+' < "${CONFIG_DIR}/wireguard/pia.log")
-        pf_gateway=$(grep -Po -m 1 '(?<=WG_SERVER_IP=)[^ ]+' < "${CONFIG_DIR}/wireguard/pia.log")
-
-        if [[ "${VPN_PIA_PORT_FORWARD_PERSIST}" == "true" ]] && [[ -f "${CONFIG_DIR}/wireguard/pia_persistent_port" ]]; then
+    if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.json" ]]; then
+        pf_hostname=$(jq -r '.hostname' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.json")
+        pf_gateway=$(jq -r '.ip' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.json")
+        if [[ "${VPN_PIA_PORT_FORWARD_PERSIST}" == "true" ]] && [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json" ]]; then
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Using persistent forwarded port."
-            pia_response=$(cat "${CONFIG_DIR}/wireguard/pia_persistent_port")
-            unset pia_token
+            pia_response=$(cat "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json")
         else
-            while [[ -z "${pia_token}" ]]; do
-                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching token..."
-                pia_token_response=$(PIA_USER=${VPN_PIA_USER} PIA_PASS=${VPN_PIA_PASS} ./get_token.sh)
-                if grep -q PIA_TOKEN= <<< "${pia_token_response}" && ! grep -q PIA_TOKEN=null <<< "${pia_token_response}"; then
-                    pia_token=$(grep PIA_TOKEN= <<< "${pia_token_response}" | awk -F '=' '{print $2}')
-                    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Token received."
+            pia_token_expires_at=$(jq -r '.token_expires_at' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.json")
+            if [[ $(date -d "${pia_token_expires_at}" +%s) -gt $(date -d "$(date)" +%s) ]]; then
+                pia_token=$(jq -r '.token' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.json")
+                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Using existing token."
+            else
+                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching a token..."
+                pia_token=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 --request POST 'https://www.privateinternetaccess.com/api/client/v2/token' --form "username=${VPN_PIA_USER}" --form "password=${VPN_PIA_PASS}" | jq -r '.token')
+                if [[ -z ${pia_token} ]]; then
+                    echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Something went wrong fetching a token!"
+                    continue
                 else
-                    echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching token failed! Re-trying in 10 seconds..."
-                    sleep 10
+                    vpn_conf_json=$(cat "${CONFIG_DIR}/wireguard/${VPN_CONF}.json")
+                    jq --sort-keys \
+                        --arg token            "${pia_token}" \
+                        --arg token_expires_at "$(date +"%c" --date='1 day')" \
+                        '.token = $token | .token_expires_at = $token_expires_at' <<< "${vpn_conf_json}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.json"
                 fi
-            done
+            fi
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching new forwarded port..."
-            pia_response=$(curl --retry 5 --retry-max-time 60 --max-time 10 --interface "${VPN_CONF}" -Gs --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "token=${pia_token}" "https://${pf_hostname}:19999/getSignature")
-            unset pia_token
+            pia_response=$(curl --retry 5 --retry-max-time 60 --max-time 10 --interface "${VPN_CONF}" -Gs --connect-to "$pf_hostname::$pf_gateway:" --cacert "${APP_DIR}/pia-scripts/ca.rsa.4096.crt" --data-urlencode "token=${pia_token}" "https://${pf_hostname}:19999/getSignature")
         fi
         if [[ $(echo "${pia_response}" | jq -r '.status') == "OK" ]]; then
-            [[ "${VPN_PIA_PORT_FORWARD_PERSIST}" == "true" ]] && echo "${pia_response}" > "${CONFIG_DIR}/wireguard/pia_persistent_port"
+            [[ "${VPN_PIA_PORT_FORWARD_PERSIST}" == "true" ]] && echo "${pia_response}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json"
             pia_payload=$(jq -r '.payload' <<< "${pia_response}")
             pia_signature=$(jq -r '.signature' <<< "${pia_response}")
             pia_payload_decoded=$(base64 -d <<< "${pia_payload}")
             pia_port=$(jq -r '.port' <<< "${pia_payload_decoded}")
             pia_port_expiration=$(jq -r '.expires_at' <<< "${pia_payload_decoded}")
-            [[ $(date -d "${pia_port_expiration}" +%s) -lt $(date -d "$(date)" +%s) ]] && rm -rf "${CONFIG_DIR}/wireguard/pia_persistent_port" && continue
+            [[ $(date -d "${pia_port_expiration}" +%s) -lt $(date -d "$(date)" +%s) ]] && rm -rf "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json" && continue
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Forwarded port will expire at [${pia_port_expiration}]."
             echo "${pia_port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
             while [[ $(date -d "${pia_port_expiration}" +%s) -gt $(date -d "$(date)" +%s) ]]; do
-                bind_port_response="$(curl --retry 5 --retry-max-time 60 --max-time 10 --interface "${VPN_CONF}" -Gs --connect-to "$pf_hostname::$pf_gateway:" --cacert "ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
+                bind_port_response="$(curl --retry 5 --retry-max-time 60 --max-time 10 --interface "${VPN_CONF}" -Gs --connect-to "$pf_hostname::$pf_gateway:" --cacert "${APP_DIR}/pia-scripts/ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pf_hostname}:19999/bindPort")"
                 if ! [[ $(jq -r '.status' <<< "${bind_port_response}") == "OK" ]]; then
                     echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind failed!"
                     break
@@ -54,7 +55,7 @@ while true; do
         fi
         sleep 60
     else
-        echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] File [${CONFIG_DIR}/wireguard/pia.log] not found! Checking again in 60 seconds..."
+        echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] File [${CONFIG_DIR}/wireguard/${VPN_CONF}.json] not found! Checking again in 60 seconds..."
         sleep 60
     fi
 done
