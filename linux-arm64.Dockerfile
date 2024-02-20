@@ -61,10 +61,5 @@ RUN mkdir "${APP_DIR}" && \
     useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
     usermod -G users hotio
 
-ARG VERSION_PIA
-RUN mkdir "${APP_DIR}/pia-scripts" && \
-    wget -O - "https://github.com/pia-foss/manual-connections/archive/${VERSION_PIA}.tar.gz" | tar xzf - -C "${APP_DIR}/pia-scripts" --strip-components=1 && \
-    chmod -R u=rwX,go=rX "${APP_DIR}/pia-scripts"
-
 COPY root/ /
 RUN chmod +x /init-hook
