@@ -1,0 +1,24 @@
+# shellcheck shell=bash
+
+get_token () {
+    local pia_token=""
+    local pia_token_expires_at=""
+    while [[ -z "${pia_token}" ]]; do
+        while [[ ! $(find "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json" -mtime -1 2>/dev/null) ]]; do
+            pia_token=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 --request POST 'https://www.privateinternetaccess.com/api/client/v2/token' --form "username=${VPN_PIA_USER}" --form "password=${VPN_PIA_PASS}" | jq -r '.token')
+            if [[ -n ${pia_token} ]]; then
+                jq --sort-keys \
+                    --arg token            "${pia_token}" \
+                    --arg token_expires_at "$(date +"%c" --date='1 day')" \
+                    '.token = $token | .token_expires_at = $token_expires_at' <<< "{}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json"
+            fi
+        done
+        pia_token_expires_at=$(jq -re '.token_expires_at' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json")
+        if [[ $(date -d "${pia_token_expires_at}" +%s) -gt $(date -d "$(date)" +%s) ]]; then
+            pia_token=$(jq -r '.token' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json")
+        else
+            rm "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json"
+        fi
+    done
+    echo "${pia_token}"
+}
