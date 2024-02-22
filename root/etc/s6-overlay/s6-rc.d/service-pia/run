@@ -2,7 +2,7 @@
 # shellcheck shell=bash
 
 # shellcheck source=/dev/null
-source /scripts/pia-functions
+source /etc/s6-overlay/scripts/pia-functions
 
 umask "${UMASK}"
 
