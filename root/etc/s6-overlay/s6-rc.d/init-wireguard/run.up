@@ -30,11 +30,11 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]]; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Reading regions data from [${CONFIG_DIR}/wireguard/pia-regions.json]."
         region_data=$(cat "${CONFIG_DIR}/wireguard/pia-regions.json")
         if [[ -z "${VPN_PIA_PREFERRED_REGION}" ]]; then
-            VPN_PIA_PREFERRED_REGION=$(jq --arg PF "${VPN_AUTO_PORT_FORWARD}" -re '.regions[] | if $PF=="true" then select(.port_forward==true) else empty end | .id' <<< "${region_data}" | sort -R | head -1)
+            VPN_PIA_PREFERRED_REGION=$(jq --arg PF "${VPN_AUTO_PORT_FORWARD}" -re '.regions[] | if $PF=="true" then select(.port_forward==true) else . end | .id' <<< "${region_data}" | sort -R | head -1)
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Picking random region [${VPN_PIA_PREFERRED_REGION}]."
         fi
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching server for region [${VPN_PIA_PREFERRED_REGION}]..."
-        pia_server=$(jq --arg PF "${VPN_AUTO_PORT_FORWARD}" --arg REGION "${VPN_PIA_PREFERRED_REGION}" -re '.regions[] | if $PF=="true" then select(.port_forward==true) else empty end | select(.id==$REGION) | .servers.wg[0]' <<< "${region_data}")
+        pia_server=$(jq --arg PF "${VPN_AUTO_PORT_FORWARD}" --arg REGION "${VPN_PIA_PREFERRED_REGION}" -re '.regions[] | if $PF=="true" then select(.port_forward==true) else . end | select(.id==$REGION) | .servers.wg[0]' <<< "${region_data}")
         pia_server_ip=$(jq -re '.ip' <<< "${pia_server}")
         pia_server_hostname=$(jq -re '.cn' <<< "${pia_server}")
     else
@@ -119,12 +119,6 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         fi
     fi
 
-    if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && grep ^DNS "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null; then
-        resolv=$(cat "/etc/resolv.conf")
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Current resolv.conf is:"
-        echo "${resolv}"
-    fi
-
     if wg-quick down "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null 2>&1; then
         echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard is still running. Stopping WireGuard..."
         sleep 5
@@ -147,11 +141,10 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         fi
     done
 
-    if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && grep ^DNS "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null; then
-        echo "${resolv}" >> "/etc/resolv.conf"
-        resolv=$(cat "/etc/resolv.conf")
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] New resolv.conf is:"
-        echo "${resolv}"
+    if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && resolvconf -i "${VPN_CONF}" > /dev/null; then
+        cat /etc/resolv.conf.bak >> "/etc/resolv.conf"
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] resolv.conf is:"
+        cat "/etc/resolv.conf"
     fi
 
     set -e
