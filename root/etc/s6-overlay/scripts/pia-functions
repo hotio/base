@@ -11,6 +11,8 @@ get_token () {
                     --arg token            "${pia_token}" \
                     --arg token_expires_at "$(date +"%c" --date='1 day')" \
                     '.token = $token | .token_expires_at = $token_expires_at' <<< "{}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json"
+            else
+                echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching a token failed!" 1>&2
             fi
         done
         pia_token_expires_at=$(jq -re '.token_expires_at' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json")
