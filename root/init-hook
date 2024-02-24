@@ -9,6 +9,10 @@ if [[ "${PRIVOXY_ENABLED}" != true ]]; then
     rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-privoxy
 fi
 
+if [[ "${UNBOUND_ENABLED}" != true ]]; then
+    rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-unbound
+fi
+
 if [[ "${VPN_PROVIDER}" != "proton" ]] || [[ "${VPN_ENABLED}" != true ]] || [[ "${VPN_AUTO_PORT_FORWARD}" != true ]]; then
     rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-proton
 fi
