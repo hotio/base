@@ -114,18 +114,23 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     else
         find "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
         chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
+        cp "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" "/dev/shm/${VPN_CONF}.conf"
         if [[ "${VPN_CONF}" != *"-nofix" ]]; then
-            sed -i 's#0.0.0.0/0#0.0.0.0/1,128.0.0.0/1#g' "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
+            sed -i 's#0.0.0.0/0#0.0.0.0/1,128.0.0.0/1#g' "/dev/shm/${VPN_CONF}.conf"
+        fi
+        if [[ "${UNBOUND_ENABLED}" == "true" ]]; then
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] DNS servers from [${VPN_CONF}] will be ignored in favor of Unbound."
+            sed -i 's#DNS.*##g' "/dev/shm/${VPN_CONF}.conf"
         fi
     fi
 
-    if wg-quick down "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" > /dev/null 2>&1; then
+    if wg-quick down "/dev/shm/${VPN_CONF}.conf" > /dev/null 2>&1; then
         echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard is still running. Stopping WireGuard..."
         sleep 5
     fi
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Starting WireGuard..."
-    if wg-quick up "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"; then
+    if wg-quick up "/dev/shm/${VPN_CONF}.conf"; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard is started."
     else
         echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard failed to start!"
@@ -141,11 +146,14 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         fi
     done
 
-    if [[ ${VPN_KEEP_LOCAL_DNS} == "true" ]] && resolvconf -i "${VPN_CONF}" > /dev/null; then
+    if [[ "${VPN_KEEP_LOCAL_DNS}" == "true" ]] && [[ "${UNBOUND_ENABLED}" != "true" ]] && resolvconf -i "${VPN_CONF}" > /dev/null; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Restoring docker DNS server to resolv.conf."
         cat /etc/resolv.conf.bak >> "/etc/resolv.conf"
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] resolv.conf is:"
-        cat "/etc/resolv.conf"
+    else
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] No modifications will be done to resolv.conf."
     fi
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] resolv.conf is:"
+    cat "/etc/resolv.conf"
 
     set -e
 
