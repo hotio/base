@@ -169,7 +169,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Default gateway is [${nw_gateway}] via interface [${nw_interface}]."
 
     docker_cidrs=$(ip -o -4 route show proto kernel | awk '{print $1}')
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker networks are [$(awk '{printf ",%s" $0}' <<< "${docker_cidrs}" | sed 's/^,//')]."
+    docker_cidrs_one_line=$(ip -o -4 route show proto kernel | awk '{print $1}' ORS=", " | xargs)
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Docker networks are [${docker_cidrs_one_line%,}]."
 
     IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
     for lan_network in "${lan_networks[@]}"; do
