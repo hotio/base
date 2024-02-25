@@ -41,7 +41,7 @@ ENTRYPOINT ["/init"]
 
 # install packages
 RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unzip p7zip ca-certificates util-linux-misc libcap-utils unbound
-RUN apk add --no-cache privoxy iptables ip6tables iproute2 openresolv wireguard-tools ipcalc && \
+RUN apk add --no-cache privoxy iproute2 openresolv wireguard-tools ipcalc nftables && \
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing wireguard-go && \
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community libnatpmp figlet
 
