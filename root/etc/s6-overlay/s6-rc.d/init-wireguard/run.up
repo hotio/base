@@ -216,53 +216,77 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ip route overview:"
     ip route
 
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuring iptables..."
+    iptables -P FORWARD DROP
+
+    iptables -P INPUT DROP
+    iptables -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
+    iptables -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
+    for nw_cidr in $docker_cidrs; do
+        iptables -A INPUT -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+    done
+    iptables -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -s "${vpn_endpoint%:*}/32" -j ACCEPT
+    iptables -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
+    iptables -A INPUT -i lo -j ACCEPT
+    IFS=',' read -ra additional_ports <<< "${open_ports%,}"
+    for additional_port in "${additional_ports[@]}"; do
+        iptables -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
+        grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
+        iptables -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
+    done
+
+    iptables -P OUTPUT DROP
+    iptables -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
+    iptables -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
+    for nw_cidr in $docker_cidrs; do
+        iptables -A OUTPUT -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+    done
+    iptables -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -d "${vpn_endpoint%:*}/32" -j ACCEPT
+    iptables -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
+    iptables -A OUTPUT -o lo -j ACCEPT
+    IFS=',' read -ra additional_ports <<< "${open_ports%,}"
+    for additional_port in "${additional_ports[@]}"; do
+        iptables -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
+        grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
+        iptables -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
+    done
+
     unset ipv6_wanted
     for file in /proc/sys/net/ipv6/conf/*; do
         [[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && ipv6_wanted="true"
     done
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Creating nftables default chains..."
-    nft add table inet hotio
-    nft add chain inet hotio forward    '{ type filter hook forward    priority 0 ; policy drop; }'
-    nft add chain inet hotio input      '{ type filter hook input      priority 0 ; policy drop; }'
-    nft add chain inet hotio output     '{ type filter hook output     priority 0 ; policy drop; }'
-    nft add chain inet hotio prerouting '{ type nat    hook prerouting priority -100 ; }'
+    [[ -z "${ipv6_wanted}" ]] && echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ipv6 is disabled, we will not set ip6tables rules."
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added nftables input rules:"
-    nft add rule inet hotio input icmp type echo-reply counter accept
-    nft add rule inet hotio input icmpv6 type echo-reply counter accept
-    IFS=',' read -ra additional_ports <<< "${open_ports%,}"
-    for additional_port in "${additional_ports[@]}"; do
-        nft add rule inet hotio input iifname "${nw_interface}" "${additional_port##*/}" dport "${additional_port%/*}" counter accept
-        grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-        nft add rule inet hotio input iifname "${VPN_CONF}" "${additional_port##*/}" dport "${additional_port%/*}" counter drop
-    done
-    nft add rule inet hotio input iifname "${VPN_CONF}" meta l4proto udp counter accept
-    nft add rule inet hotio input iifname "${VPN_CONF}" meta l4proto tcp counter accept
-    for nw_cidr in $docker_cidrs; do
-        nft add rule inet hotio input iifname "${nw_interface}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
-    done
-    nft add rule inet hotio input iifname "${nw_interface}" ip daddr "${nw_cidr}" ip saddr "${vpn_endpoint%:*}" udp sport "${vpn_endpoint_port}" counter accept
-    nft add rule inet hotio input iifname "lo" counter accept
-    nft list chain inet hotio input
+    if [[ ${ipv6_wanted} == "true" ]]; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuring ip6tables..."
+        ip6tables -P FORWARD DROP 1>&- 2>&-
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added nftables output rules:"
-    nft add rule inet hotio output icmp type echo-request counter accept
-    nft add rule inet hotio output icmpv6 type echo-request counter accept
-    IFS=',' read -ra additional_ports <<< "${open_ports%,}"
-    for additional_port in "${additional_ports[@]}"; do
-        nft add rule inet hotio output oifname "${nw_interface}" "${additional_port##*/}" sport "${additional_port%/*}" counter accept
-        grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-        nft add rule inet hotio output oifname "${VPN_CONF}" "${additional_port##*/}" sport "${additional_port%/*}" counter drop
-    done
-    nft add rule inet hotio output oifname "${VPN_CONF}" meta l4proto udp counter accept
-    nft add rule inet hotio output oifname "${VPN_CONF}" meta l4proto tcp counter accept
-    for nw_cidr in $docker_cidrs; do
-        nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
-    done
-    nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${nw_cidr}" ip daddr "${vpn_endpoint%:*}" udp dport "${vpn_endpoint_port}" counter accept
-    nft add rule inet hotio output oifname "lo" counter accept
-    nft list chain inet hotio output
+        ip6tables -P INPUT DROP 1>&- 2>&-
+        ip6tables -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
+        ip6tables -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
+        IFS=',' read -ra additional_ports <<< "${open_ports%,}"
+        for additional_port in "${additional_ports[@]}"; do
+            grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
+            ip6tables -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
+        done
+
+        ip6tables -P OUTPUT DROP 1>&- 2>&-
+        ip6tables -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
+        ip6tables -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
+        IFS=',' read -ra additional_ports <<< "${open_ports%,}"
+        for additional_port in "${additional_ports[@]}"; do
+            grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
+            ip6tables -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
+        done
+    fi
+
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] iptables overview:"
+    iptables -S
+    if [[ ${ipv6_wanted} == "true" ]]; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] ip6tables overview:"
+        ip6tables -S
+    fi
 
     set +e
 
