@@ -116,7 +116,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
         cp "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" "/dev/shm/${VPN_CONF}.conf"
         if [[ "${VPN_CONF}" != *"-nofix" ]]; then
-            sed -i 's#0.0.0.0/0#0.0.0.0/1,128.0.0.0/1#g' "/dev/shm/${VPN_CONF}.conf"
+            sed -i 's#0.0.0.0/0#0.0.0.0/1,128.0.0.0/1#g' "/dev/shm/${VPN_CONF}.conf" # Synology Fix
         fi
         if [[ "${UNBOUND_ENABLED}" == "true" ]]; then
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] DNS servers from [${VPN_CONF}] will be ignored in favor of Unbound."
@@ -234,7 +234,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     for nw_cidr in $docker_cidrs; do
         iptables -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
     done
-    iptables -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${nw_cidr}" -s "${vpn_endpoint%:*}" -j ACCEPT
+    ipcalc -4 -c "${vpn_endpoint%:*}" && iptables -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${nw_cidr}" -s "${vpn_endpoint%:*}" -j ACCEPT # Synology Fix
     iptables -A INPUT -i lo -j ACCEPT
 
     # OUTPUT
@@ -251,7 +251,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     for nw_cidr in $docker_cidrs; do
         iptables -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
     done
-    iptables -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${nw_cidr}" -d "${vpn_endpoint%:*}" -j ACCEPT
+    ipcalc -4 -c "${vpn_endpoint%:*}" && iptables -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${nw_cidr}" -d "${vpn_endpoint%:*}" -j ACCEPT # Synology Fix
     iptables -A OUTPUT -o lo -j ACCEPT
 
     # Show result
