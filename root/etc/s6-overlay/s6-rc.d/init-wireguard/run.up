@@ -167,7 +167,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     nw_interface=$(ip -o -4 route show to default | awk '{print $5}')
     nw_gateway=$(ip -o -4 route show to default | awk '{print $3}')
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Default gateway is [${nw_gateway}] via interface [${nw_interface}]."
-    primary_ip=$(ipcalc -a --no-decorate "$(ip -o -4 addr show "$(ip -o -4 route show to default | awk '{print $5}')" | awk '{print $4}')")
+    primary_ip=$(ip -o -4 addr show "$(ip -o -4 route show to default | awk '{print $5}')" | awk '{print $4}')
+    primary_ip=${primary_ip%/*}
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Container ip is [${primary_ip}] on interface [${nw_interface}]."
 
     docker_cidrs=$(ip -o -4 route show proto kernel | awk '{print $1}')
@@ -236,7 +237,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     for nw_cidr in $docker_cidrs; do
         iptables -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
     done
-    ipcalc -4 -c "${vpn_endpoint%:*}" && iptables -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${primary_ip}" -s "${vpn_endpoint%:*}" -j ACCEPT # Synology Fix
+    iptables -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${primary_ip}" -s "${vpn_endpoint%:*}" -j ACCEPT # Synology Fix
     iptables -A INPUT -i lo -j ACCEPT
 
     # OUTPUT
@@ -253,7 +254,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     for nw_cidr in $docker_cidrs; do
         iptables -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
     done
-    ipcalc -4 -c "${vpn_endpoint%:*}" && iptables -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${primary_ip}" -d "${vpn_endpoint%:*}" -j ACCEPT # Synology Fix
+    iptables -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${primary_ip}" -d "${vpn_endpoint%:*}" -j ACCEPT # Synology Fix
     iptables -A OUTPUT -o lo -j ACCEPT
 
     # Show result
