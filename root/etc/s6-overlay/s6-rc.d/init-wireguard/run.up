@@ -255,7 +255,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     iptables -A OUTPUT -o lo -j ACCEPT
 
     # Show result
-    iptables -S
+    iptables -vL
 
     unset ipv6_wanted
     for file in /proc/sys/net/ipv6/conf/*; do
@@ -288,7 +288,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         ip6tables -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
 
         # Show result
-        ip6tables -S
+        ip6tables -vL
     fi
 
     set +e
