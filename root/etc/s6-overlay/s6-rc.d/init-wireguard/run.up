@@ -168,11 +168,13 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     nw_default=$(ip -o -4 route show to default)
     nw_interface=$(awk '{print $5}' <<< "${nw_default}")
     nw_gateway=$(awk '{print $3}' <<< "${nw_default}")
+    networks="$(ip -o -4 route show proto kernel)"
+    networks_cidr=$(awk '{print $1}' <<< "${networks}")
     while IFS= read -r network; do
         default_note="         "
         [[ "$(awk '{print $3}' <<< "${network}")" == "${nw_interface}" ]] && default_ip=$(awk '{print $7}' <<< "${network}") && default_note="[default]"
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Network ${default_note}[$(awk '{print $3}' <<< "${network}")][$(awk '{print $7}' <<< "${network}")][$(awk '{print $1}' <<< "${network}")]."
-    done <<< "$(ip -o -4 route show proto kernel)"
+    done <<< "${networks}"
 
     IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
     for lan_network in "${lan_networks[@]}"; do
@@ -233,8 +235,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     done
     iptables-nft -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
     iptables-nft -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
-    docker_cidrs=$(ip -o -4 route show proto kernel | awk '{print $1}')
-    for nw_cidr in $docker_cidrs; do
+    for nw_cidr in $networks_cidr; do
         iptables-nft -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
     done
     ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-nft -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
@@ -251,7 +252,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     done
     iptables-nft -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
     iptables-nft -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
-    for nw_cidr in $docker_cidrs; do
+    for nw_cidr in $networks_cidr; do
         iptables-nft -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
     done
     ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-nft -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
