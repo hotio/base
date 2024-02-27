@@ -12,11 +12,11 @@ IFS=',' read -ra forward_ports <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS%,}"
 for forward_port in "${forward_ports[@]}"; do
     [[ ! ${forward_port} =~ "@" ]] && continue
     internal="${forward_port##*@}"
-    iptables-nft -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
-        iptables-nft -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}"
+    iptables-legacy -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
+        iptables-legacy -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}"
     if [[ ${ipv6_wanted} == "true" ]]; then
-        ip6tables-nft -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
-            ip6tables-nft -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}"
+        ip6tables-legacy -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
+            ip6tables-legacy -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}"
     fi
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected port [${forward_port%@*}/${internal##*/}] to [${internal%/*}/${internal##*/}]."
 done
@@ -38,13 +38,13 @@ while true; do
             for forward_port in "${forward_ports[@]}"; do
                 [[ ${forward_port} =~ "@" ]] && continue
                 internal="${forward_port##*@}"
-                iptables-nft -t nat -D PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${old_port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null
-                iptables-nft -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
-                    iptables-nft -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}"
+                iptables-legacy -t nat -D PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${old_port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null
+                iptables-legacy -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
+                    iptables-legacy -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}"
                 if [[ ${ipv6_wanted} == "true" ]]; then
-                    ip6tables-nft -t nat -D PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${old_port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null
-                    ip6tables-nft -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
-                        ip6tables-nft -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}"
+                    ip6tables-legacy -t nat -D PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${old_port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null
+                    ip6tables-legacy -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
+                        ip6tables-legacy -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}"
                 fi
                 echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected port [${port}/${internal##*/}] to [${internal%/*}/${internal##*/}]."
             done

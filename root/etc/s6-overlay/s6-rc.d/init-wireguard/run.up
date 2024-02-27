@@ -222,45 +222,44 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added ipv4 firewall rules:"
     # FORWARD
-    iptables-nft -P FORWARD DROP
+    iptables-legacy -P FORWARD DROP
 
     # INPUT
-    iptables-nft -P INPUT DROP
-    iptables-nft -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
+    iptables-legacy -P INPUT DROP
+    iptables-legacy -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
     IFS=',' read -ra additional_ports <<< "${open_ports%,}"
     for additional_port in "${additional_ports[@]}"; do
-        iptables-nft -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
+        iptables-legacy -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
         grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-        iptables-nft -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
+        iptables-legacy -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
     done
-    iptables-nft -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
-    iptables-nft -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
+    iptables-legacy -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
+    iptables-legacy -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
     for nw_cidr in $networks_cidr; do
-        iptables-nft -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+        iptables-legacy -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
     done
-    ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-nft -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
-    iptables-nft -A INPUT -i lo -j ACCEPT
+    ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-legacy -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
+    iptables-legacy -A INPUT -i lo -j ACCEPT
 
     # OUTPUT
-    iptables-nft -P OUTPUT DROP
-    iptables-nft -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
+    iptables-legacy -P OUTPUT DROP
+    iptables-legacy -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
     IFS=',' read -ra additional_ports <<< "${open_ports%,}"
     for additional_port in "${additional_ports[@]}"; do
-        iptables-nft -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
+        iptables-legacy -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
         grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-        iptables-nft -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
+        iptables-legacy -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
     done
-    iptables-nft -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
-    iptables-nft -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
+    iptables-legacy -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
+    iptables-legacy -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
     for nw_cidr in $networks_cidr; do
-        iptables-nft -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+        iptables-legacy -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
     done
-    ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-nft -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
-    iptables-nft -A OUTPUT -o lo -j ACCEPT
+    ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-legacy -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
+    iptables-legacy -A OUTPUT -o lo -j ACCEPT
 
     # Show result
     iptables-legacy -S
-    iptables-nft -S
 
     unset ipv6_wanted
     for file in /proc/sys/net/ipv6/conf/*; do
@@ -270,33 +269,32 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     if [[ ${ipv6_wanted} == "true" ]]; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added ipv6 firewall rules:"
         # FORWARD
-        ip6tables-nft -P FORWARD DROP
+        ip6tables-legacy -P FORWARD DROP
 
         # INPUT
-        ip6tables-nft -P INPUT DROP
-        ip6tables-nft -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
+        ip6tables-legacy -P INPUT DROP
+        ip6tables-legacy -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-            ip6tables-nft -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
+            ip6tables-legacy -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
         done
-        ip6tables-nft -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
-        ip6tables-nft -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
+        ip6tables-legacy -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
+        ip6tables-legacy -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
 
         # OUTPUT
-        ip6tables-nft -P OUTPUT DROP
-        ip6tables-nft -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
+        ip6tables-legacy -P OUTPUT DROP
+        ip6tables-legacy -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-            ip6tables-nft -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
+            ip6tables-legacy -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
         done
-        ip6tables-nft -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
-        ip6tables-nft -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
+        ip6tables-legacy -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
+        ip6tables-legacy -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
 
         # Show result
         ip6tables-legacy -S
-        ip6tables-nft -S
     fi
 
     set +e
