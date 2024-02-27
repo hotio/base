@@ -40,7 +40,7 @@ VOLUME ["${CONFIG_DIR}"]
 ENTRYPOINT ["/init"]
 
 # install packages
-RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unzip p7zip ca-certificates util-linux-misc libcap-utils unbound privoxy iproute2 openresolv wireguard-tools iptables ip6tables && \
+RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unzip p7zip ca-certificates util-linux-misc libcap-utils unbound privoxy iproute2 openresolv wireguard-tools ipcalc iptables ip6tables && \
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing wireguard-go && \
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community libnatpmp figlet
 
