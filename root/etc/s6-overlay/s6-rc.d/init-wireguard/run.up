@@ -163,7 +163,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard [${VPN_CONF}] endpoint [${vpn_endpoint_ip}][${vpn_endpoint_port}]."
 
     vpn_allowedips=$(wg show | grep 'allowed ips:' | awk -F ': ' '{print $2}')
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard [${VPN_CONF}] allowed ips [${vpn_allowedips}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard [${VPN_CONF}] allowed ips [${vpn_allowedips// /}]."
 
     nw_default=$(ip -o -4 route show to default)
     nw_interface=$(awk '{print $5}' <<< "${nw_default}")
