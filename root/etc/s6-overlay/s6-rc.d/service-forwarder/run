@@ -36,7 +36,7 @@ for forward_port in "${forward_ports[@]}"; do
             nft add rule inet hotio prerouting iifname "${VPN_CONF}" "${internal##*/}" dport "${forward_port%@*}" redirect to :"${internal%/*}"
         fi
     fi
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected port [${forward_port%@*}/${internal##*/}] to [${internal%/*}/${internal##*/}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected ($v_descr) port [${forward_port%@*}/${internal##*/}] to [${internal%/*}/${internal##*/}]."
 done
 
 re='^[0-9]+$'
@@ -76,7 +76,7 @@ while true; do
                         nft add rule inet hotio prerouting iifname "${VPN_CONF}" "${internal##*/}" dport "${port}" redirect to :"${internal%/*}"
                     fi
                 fi
-                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected port [${port}/${internal##*/}] to [${internal%/*}/${internal##*/}]."
+                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected ($v_descr) port [${port}/${internal##*/}] to [${internal%/*}/${internal##*/}]."
             done
             # shellcheck source=/dev/null
             source "${APP_DIR}/forwarded_port_update_app"
