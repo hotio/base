@@ -225,92 +225,94 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         [[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && ipv6_wanted="true"
     done
 
-    v=legacy
-    v_descr=legacy
-    if iptables-nft -S > /dev/null 2>&1; then
-        v=nft
-        v_descr=nf_tables
-    fi
-    if nft list ruleset > /dev/null 2>&1; then
-        v_descr=nftables
+    if [[ "${VPN_FIREWALL_TYPE}" == "auto" ]] || [[ -z "${VPN_FIREWALL_TYPE}" ]]; then
+        v=legacy
+        if iptables-nft -S > /dev/null 2>&1; then
+            v=nft
+        fi
+        if nft list ruleset > /dev/null 2>&1; then
+            v="nftables"
+        fi
+    else
+        v="${VPN_FIREWALL_TYPE}"
     fi
 
-    if [[ "${v_descr}" == legacy ]] || [[ "${v_descr}" == nf_tables ]]; then
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added ipv4 ($v_descr) firewall rules:"
+    if [[ "${v}" == legacy ]] || [[ "${v}" == nft ]]; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added ipv4 [$v] firewall rules:"
         # FORWARD
-        iptables-$v -P FORWARD DROP
+        iptables-"$v" -P FORWARD DROP
 
         # INPUT
-        iptables-$v -P INPUT DROP
-        iptables-$v -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
+        iptables-"$v" -P INPUT DROP
+        iptables-"$v" -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
-            iptables-$v -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
+            iptables-"$v" -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-            iptables-$v -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
+            iptables-"$v" -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
         done
-        iptables-$v -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
-        iptables-$v -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
+        iptables-"$v" -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
+        iptables-"$v" -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
         for nw_cidr in $networks_cidr; do
-            iptables-$v -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+            iptables-"$v" -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
         done
-        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-$v -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
-        iptables-$v -A INPUT -i lo -j ACCEPT
+        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-"$v" -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
+        iptables-"$v" -A INPUT -i lo -j ACCEPT
 
         # OUTPUT
-        iptables-$v -P OUTPUT DROP
-        iptables-$v -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
+        iptables-"$v" -P OUTPUT DROP
+        iptables-"$v" -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
-            iptables-$v -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
+            iptables-"$v" -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-            iptables-$v -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
+            iptables-"$v" -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
         done
-        iptables-$v -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
-        iptables-$v -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
+        iptables-"$v" -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
+        iptables-"$v" -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
         for nw_cidr in $networks_cidr; do
-            iptables-$v -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+            iptables-"$v" -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
         done
-        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-$v -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
-        iptables-$v -A OUTPUT -o lo -j ACCEPT
+        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-"$v" -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
+        iptables-"$v" -A OUTPUT -o lo -j ACCEPT
 
         # Show result
-        iptables-$v -S 2> /dev/null
+        iptables-"$v" -S 2> /dev/null
 
         if [[ ${ipv6_wanted} == "true" ]]; then
-            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added ipv6 ($v) firewall rules:"
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added ipv6 [$v] firewall rules:"
             # FORWARD
-            ip6tables-$v -P FORWARD DROP
+            ip6tables-"$v" -P FORWARD DROP
 
             # INPUT
-            ip6tables-$v -P INPUT DROP
-            ip6tables-$v -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
+            ip6tables-"$v" -P INPUT DROP
+            ip6tables-"$v" -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
             IFS=',' read -ra additional_ports <<< "${open_ports%,}"
             for additional_port in "${additional_ports[@]}"; do
                 grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-                ip6tables-$v -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
+                ip6tables-"$v" -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
             done
-            ip6tables-$v -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
-            ip6tables-$v -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
+            ip6tables-"$v" -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
+            ip6tables-"$v" -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
 
             # OUTPUT
-            ip6tables-$v -P OUTPUT DROP
-            ip6tables-$v -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
+            ip6tables-"$v" -P OUTPUT DROP
+            ip6tables-"$v" -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
             IFS=',' read -ra additional_ports <<< "${open_ports%,}"
             for additional_port in "${additional_ports[@]}"; do
                 grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-                ip6tables-$v -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
+                ip6tables-"$v" -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
             done
-            ip6tables-$v -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
-            ip6tables-$v -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
+            ip6tables-"$v" -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
+            ip6tables-"$v" -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
 
             # Show result
-            ip6tables-$v -S 2> /dev/null
+            ip6tables-"$v" -S 2> /dev/null
         fi
     fi
 
-    if [[ "${v_descr}" == nftables ]]; then
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added ($v_descr) firewall rules:"
+    if [[ "${v}" == nftables ]]; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added [$v] firewall rules:"
         # Create chains
         nft add table inet hotio
         nft add chain inet hotio forward    '{ type filter hook forward    priority 0 ; policy drop; }'

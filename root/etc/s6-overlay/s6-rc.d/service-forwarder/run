@@ -8,35 +8,37 @@ for file in /proc/sys/net/ipv6/conf/*; do
     [[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && ipv6_wanted="true"
 done
 
-v=legacy
-v_descr=legacy
-if iptables-nft -S > /dev/null 2>&1; then
-    v=nft
-    v_descr=nf_tables
-fi
-if nft list ruleset > /dev/null 2>&1; then
-    v_descr=nftables
+if [[ "${VPN_FIREWALL_TYPE}" == "auto" ]] || [[ -z "${VPN_FIREWALL_TYPE}" ]]; then
+    v=legacy
+    if iptables-nft -S > /dev/null 2>&1; then
+        v=nft
+    fi
+    if nft list ruleset > /dev/null 2>&1; then
+        v="nftables"
+    fi
+else
+    v="${VPN_FIREWALL_TYPE}"
 fi
 
 IFS=',' read -ra forward_ports <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS%,}"
 for forward_port in "${forward_ports[@]}"; do
     [[ ! ${forward_port} =~ "@" ]] && continue
     internal="${forward_port##*@}"
-    if [[ "${v_descr}" == legacy ]] || [[ "${v_descr}" == nf_tables ]]; then
-        iptables-$v -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
-            iptables-$v -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}"
+    if [[ "${v}" == legacy ]] || [[ "${v}" == nft ]]; then
+        iptables-"$v" -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
+            iptables-"$v" -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}"
         if [[ ${ipv6_wanted} == "true" ]]; then
-            ip6tables-$v -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
-                ip6tables-$v -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}"
+            ip6tables-"$v" -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
+                ip6tables-"$v" -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${forward_port%@*}" -j REDIRECT --to-ports "${internal%/*}"
         fi
     fi
-    if [[ "${v_descr}" == nftables ]]; then
+    if [[ "${v}" == nftables ]]; then
         new_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${forward_port%@*} redirect to :${internal##*/} " <<< "$(nft --handle list chain inet hotio prerouting)" | sed 's/.* # handle //g')
         if [[ -z "${new_rule}" ]]; then
             nft add rule inet hotio prerouting iifname "${VPN_CONF}" "${internal##*/}" dport "${forward_port%@*}" redirect to :"${internal%/*}"
         fi
     fi
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected ($v_descr) port [${forward_port%@*}/${internal##*/}] to [${internal%/*}/${internal##*/}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected [$v] port [${forward_port%@*}/${internal##*/}] to [${internal%/*}/${internal##*/}]."
 done
 
 re='^[0-9]+$'
@@ -56,17 +58,17 @@ while true; do
             for forward_port in "${forward_ports[@]}"; do
                 [[ ${forward_port} =~ "@" ]] && continue
                 internal="${forward_port##*@}"
-                if [[ "${v_descr}" == legacy ]] || [[ "${v_descr}" == nf_tables ]]; then
-                    iptables-$v -t nat -D PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${old_port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null
-                    iptables-$v -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
-                        iptables-$v -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}"
+                if [[ "${v}" == legacy ]] || [[ "${v}" == nft ]]; then
+                    iptables-"$v" -t nat -D PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${old_port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null
+                    iptables-"$v" -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
+                        iptables-"$v" -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}"
                     if [[ ${ipv6_wanted} == "true" ]]; then
-                        ip6tables-$v -t nat -D PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${old_port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null
-                        ip6tables-$v -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
-                            ip6tables-$v -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}"
+                        ip6tables-"$v" -t nat -D PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${old_port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null
+                        ip6tables-"$v" -t nat -C PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}" 2> /dev/null || \
+                            ip6tables-"$v" -t nat -A PREROUTING -i "${VPN_CONF}" -p "${internal##*/}" --dport "${port}" -j REDIRECT --to-ports "${internal%/*}"
                     fi
                 fi
-                if [[ "${v_descr}" == nftables ]]; then
+                if [[ "${v}" == nftables ]]; then
                     old_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${old_port} redirect to :${internal##*/} " <<< "$(nft --handle list chain inet hotio prerouting)" | sed 's/.* # handle //g')
                     if [[ -n "${old_rule}" ]]; then
                         nft delete rule inet hotio prerouting handle "${old_rule}"
@@ -76,7 +78,7 @@ while true; do
                         nft add rule inet hotio prerouting iifname "${VPN_CONF}" "${internal##*/}" dport "${port}" redirect to :"${internal%/*}"
                     fi
                 fi
-                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected ($v_descr) port [${port}/${internal##*/}] to [${internal%/*}/${internal##*/}]."
+                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected [$v] port [${port}/${internal##*/}] to [${internal%/*}/${internal##*/}]."
             done
             # shellcheck source=/dev/null
             source "${APP_DIR}/forwarded_port_update_app"
