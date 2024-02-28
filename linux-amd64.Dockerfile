@@ -22,7 +22,7 @@ RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
         ca-certificates jq curl wget wget2 unzip xz-utils p7zip-full unrar python3 bsdmainutils figlet libcap2-bin \
         locales tzdata \
-        privoxy iptables iproute2 openresolv wireguard-tools ipcalc-ng wireguard-go natpmpc unbound && \
+        privoxy iptables nftables iproute2 openresolv wireguard-tools ipcalc-ng wireguard-go natpmpc unbound && \
     ln -s ipcalc-ng /usr/bin/ipcalc && \
 # generate locale
     locale-gen en_US.UTF-8 && \
