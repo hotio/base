@@ -352,7 +352,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         ipcalc -4 -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" udp dport "${vpn_endpoint_port}" counter accept
         nft add rule inet hotio output oifname "lo" counter accept
         # List rules
-        nft list ruleset
+        nft -s list ruleset
     fi
 
     set +e
