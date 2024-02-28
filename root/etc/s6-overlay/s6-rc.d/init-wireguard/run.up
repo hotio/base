@@ -331,7 +331,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         for nw_cidr in $networks_cidr; do
             nft add rule inet hotio input iifname "${nw_interface}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
         done
-        ipcalc -4 -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${nw_interface}" ip daddr "${nw_cidr}" ip saddr "${vpn_endpoint_ip}" udp sport "${vpn_endpoint_port}" counter accept
+        ipcalc -4 -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${nw_interface}" ip daddr "${default_ip}" ip saddr "${vpn_endpoint_ip}" udp sport "${vpn_endpoint_port}" counter accept
         nft add rule inet hotio input iifname "lo" counter accept
         # Create output rules
         nft add rule inet hotio output icmp type echo-request counter accept
@@ -347,7 +347,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         for nw_cidr in $networks_cidr; do
             nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
         done
-        ipcalc -4 -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${nw_cidr}" ip daddr "${vpn_endpoint_ip}" udp dport "${vpn_endpoint_port}" counter accept
+        ipcalc -4 -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" udp dport "${vpn_endpoint_port}" counter accept
         nft add rule inet hotio output oifname "lo" counter accept
         # List rules
         nft list ruleset
