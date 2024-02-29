@@ -2,7 +2,7 @@ ARG UPSTREAM_IMAGE
 ARG UPSTREAM_DIGEST_AMD64
 
 FROM alpine AS builder
-ARG UNRAR_VER=6.2.12
+ARG UNRAR_VER=7.0.7
 RUN apk --update --no-cache add \
     autoconf \
     automake \
