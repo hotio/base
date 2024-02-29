@@ -358,8 +358,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     set +e
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Performing internet connectivity test..."
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [IPV4] $(curl -fsL -4 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')"
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [IPV4] [PING: $(ping -c 1 1.1.1.1 2> /dev/null | grep 'time=' | awk -F '=' '{print $4}')] $(curl -fsL -4 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')"
     if [[ ${ipv6_wanted} == "true" ]]; then
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [IPV6] $(curl -fsL -6 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')"
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [IPV6] [PING: $(ping6 -c 1 2606:4700:4700::1111 2> /dev/null | grep 'time=' | awk -F '=' '{print $4}')] $(curl -fsL -6 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')"
     fi
 fi
