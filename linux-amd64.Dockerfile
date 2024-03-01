@@ -1,8 +1,29 @@
 ARG UPSTREAM_IMAGE
 ARG UPSTREAM_DIGEST_AMD64
 
-FROM alpine AS builder
+FROM alpine AS builder6
 ARG UNRAR_VER=6.2.12
+RUN apk --update --no-cache add \
+    autoconf \
+    automake \
+    binutils \
+    build-base \
+    cmake \
+    cppunit-dev \
+    curl-dev \
+    libtool \
+    linux-headers \
+    zlib-dev \
+# Install unrar from source
+&& cd /tmp \
+&& wget https://www.rarlab.com/rar/unrarsrc-${UNRAR_VER}.tar.gz -O /tmp/unrar.tar.gz \
+&& tar -xzf /tmp/unrar.tar.gz \
+&& cd unrar \
+&& make -f makefile \
+&& install -Dm 755 unrar /usr/bin/unrar
+
+FROM alpine AS builder7
+ARG UNRAR_VER=7.0.7
 RUN apk --update --no-cache add \
     autoconf \
     automake \
@@ -44,7 +65,8 @@ RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findut
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing wireguard-go && \
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community libnatpmp figlet
 
-COPY --from=builder /usr/bin/unrar /usr/bin/
+COPY --from=builder6 /usr/bin/unrar /usr/bin/unrar6
+COPY --from=builder7 /usr/bin/unrar /usr/bin/unrar7
 
 # https://github.com/just-containers/s6-overlay/releases
 ARG VERSION_S6
