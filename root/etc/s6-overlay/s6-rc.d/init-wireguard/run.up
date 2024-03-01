@@ -108,6 +108,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         exit 1
     fi
 
+    [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-pre.sh" ]] && bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-pre.sh"
+
     if [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
         echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuration file [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf] was not found. Exiting..."
         exit 1
@@ -358,6 +360,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     fi
 
     set +e
+
+    [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh" ]] && bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh"
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Performing internet connectivity test..."
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [IPV4] [PING: $(ping -c 1 1.1.1.1 2> /dev/null | grep 'time=' | awk -F '=' '{print $4}')] $(curl -fsL -4 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')"
