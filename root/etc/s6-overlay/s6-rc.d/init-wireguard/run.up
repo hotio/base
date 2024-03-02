@@ -133,7 +133,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         if grep -q alpine < /etc/os-release; then
             apk del nftables > /dev/null 2>&1
         else
-            apt purge nftables > /dev/null 2>&1
+            apt purge -y nftables > /dev/null 2>&1
         fi
     fi
 
