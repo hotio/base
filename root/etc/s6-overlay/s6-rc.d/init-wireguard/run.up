@@ -124,8 +124,6 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] DNS servers from [${VPN_CONF}] will be ignored in favor of Unbound."
             sed -i 's#DNS.*##g' "/dev/shm/${VPN_CONF}.conf"
         fi
-        address=$(grep 'Address.*=' < "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
-        sed -i "s#${address}#$(ipcalc -a --no-decorate "${address}")#g" "/dev/shm/${VPN_CONF}.conf"
     fi
 
     if [[ "${VPN_FIREWALL_TYPE}" == "legacy" ]] || ! lsmod | grep -q nf_tables; then
