@@ -95,7 +95,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         echo "Add: --sysctl=\"net.ipv4.conf.all.src_valid_mark=1\""
         exit 1
     fi
-    sed -i "s:sysctl -q net.ipv4.conf.all.src_valid_mark=1:echo skipping setting net.ipv4.conf.all.src_valid_mark:" /usr/bin/wg-quick
+    sed -i "s:.*sysctl -q net.ipv4.conf.all.src_valid_mark=1.*::" /usr/bin/wg-quick
 
     if [[ "$(cat /proc/sys/net/ipv6/conf/all/disable_ipv6)" != "1" ]]; then
         echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv6.conf.all.disable_ipv6=1\"] is not set. Consider disabling ipv6."
@@ -117,7 +117,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         find "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
         chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
         dos2unix -q -n "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" "/dev/shm/${VPN_CONF}.conf"
-        if [[ "${VPN_CONF}" != *"-nofix" ]]; then
+        if [[ "${VPN_CONF}" == *"-fix" ]]; then
             sed -i 's#0.0.0.0/0#0.0.0.0/1,128.0.0.0/1#g' "/dev/shm/${VPN_CONF}.conf" # Synology Fix
         fi
         if [[ "${UNBOUND_ENABLED}" == "true" ]]; then
@@ -126,6 +126,15 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         fi
         address=$(grep 'Address.*=' < "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
         sed -i "s#${address}#$(ipcalc -a --no-decorate "${address}")#g" "/dev/shm/${VPN_CONF}.conf"
+    fi
+
+    if [[ "${VPN_FIREWALL_TYPE}" == "legacy" ]] || ! lsmod | grep -q nf_tables; then
+        echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Falling back to [iptables-legacy], removing package [nftables]..."
+        if grep -q alpine < /etc/os-release; then
+            apk del nftables > /dev/null 2>&1
+        else
+            apt purge nftables > /dev/null 2>&1
+        fi
     fi
 
     if wg-quick down "/dev/shm/${VPN_CONF}.conf" > /dev/null 2>&1; then
@@ -186,7 +195,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added [${lan_network}][LAN] as route via interface [${nw_interface}]."
     done
 
-    if [[ "${VPN_CONF}" != *"-nofix" ]]; then
+    if [[ "${VPN_CONF}" == *"-fix" ]]; then
         ip route add "${vpn_endpoint_ip}" via "${nw_gateway}" dev "${nw_interface}"
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added [${vpn_endpoint_ip}][${VPN_CONF}] as route via interface [${nw_interface}]."
     fi
@@ -229,94 +238,78 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         [[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && ipv6_wanted="true"
     done
 
-    if [[ "${VPN_FIREWALL_TYPE}" == "auto" ]] || [[ -z "${VPN_FIREWALL_TYPE}" ]]; then
-        v=legacy
-        if iptables-nft -S > /dev/null 2>&1; then
-            v=nft
-        fi
-        if nft list ruleset > /dev/null 2>&1; then
-            v="nftables"
-        fi
-    else
-        v="${VPN_FIREWALL_TYPE}"
-    fi
-
-    if [[ "${v}" == legacy ]] || [[ "${v}" == nft ]]; then
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added ipv4 [$v] firewall rules:"
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added firewall rules:"
+    if ! type nft > /dev/null 2>&1; then
         # FORWARD
-        iptables-"$v" -P FORWARD DROP
+        iptables-legacy -P FORWARD DROP
 
         # INPUT
-        iptables-"$v" -P INPUT DROP
-        iptables-"$v" -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
+        iptables-legacy -P INPUT DROP
+        iptables-legacy -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
-            iptables-"$v" -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
+            iptables-legacy -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-            iptables-"$v" -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
+            iptables-legacy -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
         done
-        iptables-"$v" -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
-        iptables-"$v" -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
+        iptables-legacy -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
+        iptables-legacy -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
         for nw_cidr in $networks_cidr; do
-            iptables-"$v" -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+            iptables-legacy -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
         done
-        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-"$v" -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
-        iptables-"$v" -A INPUT -i lo -j ACCEPT
+        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-legacy -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT
+        iptables-legacy -A INPUT -i lo -j ACCEPT
 
         # OUTPUT
-        iptables-"$v" -P OUTPUT DROP
-        iptables-"$v" -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
+        iptables-legacy -P OUTPUT DROP
+        iptables-legacy -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
-            iptables-"$v" -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
+            iptables-legacy -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-            iptables-"$v" -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
+            iptables-legacy -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
         done
-        iptables-"$v" -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
-        iptables-"$v" -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
+        iptables-legacy -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
+        iptables-legacy -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
         for nw_cidr in $networks_cidr; do
-            iptables-"$v" -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+            iptables-legacy -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
         done
-        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-"$v" -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT # Synology Fix
-        iptables-"$v" -A OUTPUT -o lo -j ACCEPT
+        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-legacy -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT
+        iptables-legacy -A OUTPUT -o lo -j ACCEPT
 
         # Show result
-        iptables-"$v" -S 2> /dev/null
+        iptables-legacy -S
 
         if [[ ${ipv6_wanted} == "true" ]]; then
-            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added ipv6 [$v] firewall rules:"
             # FORWARD
-            ip6tables-"$v" -P FORWARD DROP
+            ip6tables-legacy -P FORWARD DROP
 
             # INPUT
-            ip6tables-"$v" -P INPUT DROP
-            ip6tables-"$v" -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
+            ip6tables-legacy -P INPUT DROP
+            ip6tables-legacy -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
             IFS=',' read -ra additional_ports <<< "${open_ports%,}"
             for additional_port in "${additional_ports[@]}"; do
                 grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-                ip6tables-"$v" -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
+                ip6tables-legacy -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
             done
-            ip6tables-"$v" -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
-            ip6tables-"$v" -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
+            ip6tables-legacy -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
+            ip6tables-legacy -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
 
             # OUTPUT
-            ip6tables-"$v" -P OUTPUT DROP
-            ip6tables-"$v" -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
+            ip6tables-legacy -P OUTPUT DROP
+            ip6tables-legacy -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
             IFS=',' read -ra additional_ports <<< "${open_ports%,}"
             for additional_port in "${additional_ports[@]}"; do
                 grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-                ip6tables-"$v" -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
+                ip6tables-legacy -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
             done
-            ip6tables-"$v" -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
-            ip6tables-"$v" -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
+            ip6tables-legacy -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
+            ip6tables-legacy -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
 
             # Show result
-            ip6tables-"$v" -S 2> /dev/null
+            ip6tables-legacy -S
         fi
-    fi
-
-    if [[ "${v}" == nftables ]]; then
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added [$v] firewall rules:"
+    else
         # Create chains
         nft add table inet hotio
         nft add chain inet hotio forward    '{ type filter hook forward    priority 0 ; policy drop; }'
@@ -356,7 +349,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         ipcalc -4 -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" udp dport "${vpn_endpoint_port}" counter accept
         nft add rule inet hotio output oifname "lo" counter accept
         # List rules
-        nft -s list ruleset
+        nft -s list table hotio
     fi
 
     set +e
