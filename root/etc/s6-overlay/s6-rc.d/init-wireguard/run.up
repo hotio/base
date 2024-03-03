@@ -126,7 +126,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         fi
     fi
 
-    if [[ "${VPN_FIREWALL_TYPE}" == "legacy" ]] || ! lsmod | grep -q nf_tables; then
+    if [[ "${VPN_FIREWALL_TYPE}" == "legacy" ]] || ( ! lsmod | grep -q nf_tables && [[ "${VPN_FIREWALL_TYPE}" != "nftables" ]] ); then
         echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Falling back to [iptables], removing package [nftables]..."
         if grep -q alpine < /etc/os-release; then
             apk del nftables > /dev/null 2>&1
