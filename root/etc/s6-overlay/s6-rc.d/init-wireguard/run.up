@@ -179,7 +179,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     nw_default=$(ip -o -4 route show to default)
     nw_interface=$(awk '{print $5}' <<< "${nw_default}")
     nw_gateway=$(awk '{print $3}' <<< "${nw_default}")
-    networks="$(ip -o -4 route show proto kernel)"
+    networks="$(ip -o -4 route show proto kernel | grep -v "${VPN_CONF}")"
     networks_cidr=$(awk '{print $1}' <<< "${networks}")
     while IFS= read -r network; do
         default_note="         "
@@ -251,7 +251,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             iptables-legacy -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
         done
         for nw_cidr in $networks_cidr; do
-            iptables-legacy -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+            iptables-legacy -A INPUT -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
         done
         iptables-legacy -A INPUT -i "${VPN_CONF}" -j ACCEPT
         iptables-legacy -A INPUT -i lo -j ACCEPT
@@ -266,7 +266,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             iptables-legacy -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
         done
         for nw_cidr in $networks_cidr; do
-            iptables-legacy -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+            iptables-legacy -A OUTPUT -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
         done
         iptables-legacy -A OUTPUT -o "${VPN_CONF}" -j ACCEPT
         iptables-legacy -A OUTPUT -o lo -j ACCEPT
@@ -319,7 +319,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             nft add rule inet hotio input iifname "${VPN_CONF}" "${additional_port##*/}" dport "${additional_port%/*}" counter drop
         done
         for nw_cidr in $networks_cidr; do
-            nft add rule inet hotio input iifname "${nw_interface}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
+            nft add rule inet hotio input ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
         done
         nft add rule inet hotio input iifname "${VPN_CONF}" counter accept
         nft add rule inet hotio input iifname "lo" counter accept
@@ -335,7 +335,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             nft add rule inet hotio output oifname "${VPN_CONF}" "${additional_port##*/}" sport "${additional_port%/*}" counter drop
         done
         for nw_cidr in $networks_cidr; do
-            nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
+            nft add rule inet hotio output ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
         done
         nft add rule inet hotio output oifname "${VPN_CONF}" counter accept
         nft add rule inet hotio output oifname "lo" counter accept
