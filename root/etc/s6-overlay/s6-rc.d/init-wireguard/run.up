@@ -127,7 +127,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     fi
 
     if [[ "${VPN_FIREWALL_TYPE}" == "legacy" ]] || ! lsmod | grep -q nf_tables; then
-        echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Falling back to [iptables-legacy], removing package [nftables]..."
+        echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Falling back to [iptables-nft], removing package [nftables]..."
         if grep -q alpine < /etc/os-release; then
             apk del nftables > /dev/null 2>&1
         else
@@ -239,69 +239,69 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added firewall rules:"
     if ! type nft > /dev/null 2>&1; then
         # Defaults
-        iptables-legacy -P FORWARD DROP
-        iptables-legacy -P INPUT DROP
-        iptables-legacy -P OUTPUT DROP
+        iptables-nft -P FORWARD DROP
+        iptables-nft -P INPUT DROP
+        iptables-nft -P OUTPUT DROP
 
         # INPUT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
-            iptables-legacy -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
+            iptables-nft -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-            iptables-legacy -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
+            iptables-nft -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
         done
         for nw_cidr in $networks_cidr; do
-            iptables-legacy -A INPUT -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+            iptables-nft -A INPUT -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
         done
-        iptables-legacy -A INPUT -i "${VPN_CONF}" -j ACCEPT
-        iptables-legacy -A INPUT -i lo -j ACCEPT
-        iptables-legacy -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
-        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-legacy -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT
+        iptables-nft -A INPUT -i "${VPN_CONF}" -j ACCEPT
+        iptables-nft -A INPUT -i lo -j ACCEPT
+        iptables-nft -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
+        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-nft -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT
 
         # OUTPUT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
-            iptables-legacy -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
+            iptables-nft -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-            iptables-legacy -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
+            iptables-nft -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
         done
         for nw_cidr in $networks_cidr; do
-            iptables-legacy -A OUTPUT -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+            iptables-nft -A OUTPUT -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
         done
-        iptables-legacy -A OUTPUT -o "${VPN_CONF}" -j ACCEPT
-        iptables-legacy -A OUTPUT -o lo -j ACCEPT
-        iptables-legacy -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
-        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-legacy -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT
+        iptables-nft -A OUTPUT -o "${VPN_CONF}" -j ACCEPT
+        iptables-nft -A OUTPUT -o lo -j ACCEPT
+        iptables-nft -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
+        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-nft -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT
 
         # Show result
-        iptables-legacy -S
+        iptables-nft -S
 
         if [[ ${ipv6_wanted} == "true" ]]; then
             # Defaults
-            ip6tables-legacy -P FORWARD DROP
-            ip6tables-legacy -P INPUT DROP
-            ip6tables-legacy -P OUTPUT DROP
+            ip6tables-nft -P FORWARD DROP
+            ip6tables-nft -P INPUT DROP
+            ip6tables-nft -P OUTPUT DROP
 
             # INPUT
             IFS=',' read -ra additional_ports <<< "${open_ports%,}"
             for additional_port in "${additional_ports[@]}"; do
                 grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-                ip6tables-legacy -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
+                ip6tables-nft -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
             done
-            ip6tables-legacy -A INPUT -i "${VPN_CONF}" -j ACCEPT
-            ip6tables-legacy -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
+            ip6tables-nft -A INPUT -i "${VPN_CONF}" -j ACCEPT
+            ip6tables-nft -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
 
             # OUTPUT
             IFS=',' read -ra additional_ports <<< "${open_ports%,}"
             for additional_port in "${additional_ports[@]}"; do
                 grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
-                ip6tables-legacy -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
+                ip6tables-nft -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
             done
-            ip6tables-legacy -A OUTPUT -o "${VPN_CONF}" -j ACCEPT
-            ip6tables-legacy -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
+            ip6tables-nft -A OUTPUT -o "${VPN_CONF}" -j ACCEPT
+            ip6tables-nft -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
 
             # Show result
-            ip6tables-legacy -S
+            ip6tables-nft -S
         fi
     else
         # Create chains
