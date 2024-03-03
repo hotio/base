@@ -24,6 +24,8 @@ RUN apt update && \
         locales tzdata \
         privoxy iptables nftables iproute2 openresolv wireguard-tools ipcalc-ng wireguard-go natpmpc unbound dos2unix kmod iputils-ping && \
     ln -s ipcalc-ng /usr/bin/ipcalc && \
+    update-alternatives --set iptables /usr/sbin/iptables-legacy && \
+    update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy && \
 # generate locale
     locale-gen en_US.UTF-8 && \
 # clean up
