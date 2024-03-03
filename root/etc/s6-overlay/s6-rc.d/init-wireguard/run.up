@@ -238,71 +238,67 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added firewall rules:"
     if ! type nft > /dev/null 2>&1; then
-        # FORWARD
+        # Defaults
         iptables-legacy -P FORWARD DROP
+        iptables-legacy -P INPUT DROP
+        iptables-legacy -P OUTPUT DROP
 
         # INPUT
-        iptables-legacy -P INPUT DROP
-        iptables-legacy -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
             iptables-legacy -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             iptables-legacy -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
         done
-        iptables-legacy -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
-        iptables-legacy -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
         for nw_cidr in $networks_cidr; do
             iptables-legacy -A INPUT -i "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
         done
-        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-legacy -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT
+        iptables-legacy -A INPUT -i "${VPN_CONF}" -j ACCEPT
         iptables-legacy -A INPUT -i lo -j ACCEPT
+        iptables-legacy -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
+        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-legacy -A INPUT -i "${nw_interface}" -p udp --sport "${vpn_endpoint_port}" -d "${default_ip}" -s "${vpn_endpoint_ip}" -j ACCEPT
 
         # OUTPUT
-        iptables-legacy -P OUTPUT DROP
-        iptables-legacy -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
             iptables-legacy -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             iptables-legacy -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
         done
-        iptables-legacy -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
-        iptables-legacy -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
         for nw_cidr in $networks_cidr; do
             iptables-legacy -A OUTPUT -o "${nw_interface}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
         done
-        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-legacy -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT
+        iptables-legacy -A OUTPUT -o "${VPN_CONF}" -j ACCEPT
         iptables-legacy -A OUTPUT -o lo -j ACCEPT
+        iptables-legacy -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
+        ipcalc -4 -c "${vpn_endpoint_ip}" && iptables-legacy -A OUTPUT -o "${nw_interface}" -p udp --dport "${vpn_endpoint_port}" -s "${default_ip}" -d "${vpn_endpoint_ip}" -j ACCEPT
 
         # Show result
         iptables-legacy -S
 
         if [[ ${ipv6_wanted} == "true" ]]; then
-            # FORWARD
+            # Defaults
             ip6tables-legacy -P FORWARD DROP
+            ip6tables-legacy -P INPUT DROP
+            ip6tables-legacy -P OUTPUT DROP
 
             # INPUT
-            ip6tables-legacy -P INPUT DROP
-            ip6tables-legacy -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
             IFS=',' read -ra additional_ports <<< "${open_ports%,}"
             for additional_port in "${additional_ports[@]}"; do
                 grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
                 ip6tables-legacy -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
             done
-            ip6tables-legacy -A INPUT -i "${VPN_CONF}" -p udp -j ACCEPT
-            ip6tables-legacy -A INPUT -i "${VPN_CONF}" -p tcp -j ACCEPT
+            ip6tables-legacy -A INPUT -i "${VPN_CONF}" -j ACCEPT
+            ip6tables-legacy -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
 
             # OUTPUT
-            ip6tables-legacy -P OUTPUT DROP
-            ip6tables-legacy -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
             IFS=',' read -ra additional_ports <<< "${open_ports%,}"
             for additional_port in "${additional_ports[@]}"; do
                 grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
                 ip6tables-legacy -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
             done
-            ip6tables-legacy -A OUTPUT -o "${VPN_CONF}" -p udp -j ACCEPT
-            ip6tables-legacy -A OUTPUT -o "${VPN_CONF}" -p tcp -j ACCEPT
+            ip6tables-legacy -A OUTPUT -o "${VPN_CONF}" -j ACCEPT
+            ip6tables-legacy -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
 
             # Show result
             ip6tables-legacy -S
@@ -314,38 +310,39 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         nft add chain inet hotio input      '{ type filter hook input      priority 0 ; policy drop; }'
         nft add chain inet hotio output     '{ type filter hook output     priority 0 ; policy drop; }'
         nft add chain inet hotio prerouting '{ type nat    hook prerouting priority -100 ; }'
+
         # Create input rules
-        nft add rule inet hotio input icmp type echo-reply counter accept
-        nft add rule inet hotio input icmpv6 type echo-reply counter accept
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
             nft add rule inet hotio input iifname "${nw_interface}" "${additional_port##*/}" dport "${additional_port%/*}" counter accept
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             nft add rule inet hotio input iifname "${VPN_CONF}" "${additional_port##*/}" dport "${additional_port%/*}" counter drop
         done
-        nft add rule inet hotio input iifname "${VPN_CONF}" meta l4proto udp counter accept
-        nft add rule inet hotio input iifname "${VPN_CONF}" meta l4proto tcp counter accept
         for nw_cidr in $networks_cidr; do
             nft add rule inet hotio input iifname "${nw_interface}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
         done
-        ipcalc -4 -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${nw_interface}" ip daddr "${default_ip}" ip saddr "${vpn_endpoint_ip}" udp sport "${vpn_endpoint_port}" counter accept
+        nft add rule inet hotio input iifname "${VPN_CONF}" counter accept
         nft add rule inet hotio input iifname "lo" counter accept
+        nft add rule inet hotio input icmp type echo-reply counter accept
+        nft add rule inet hotio input icmpv6 type echo-reply counter accept
+        ipcalc -4 -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${nw_interface}" ip daddr "${default_ip}" ip saddr "${vpn_endpoint_ip}" udp sport "${vpn_endpoint_port}" counter accept
+
         # Create output rules
-        nft add rule inet hotio output icmp type echo-request counter accept
-        nft add rule inet hotio output icmpv6 type echo-request counter accept
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
             nft add rule inet hotio output oifname "${nw_interface}" "${additional_port##*/}" sport "${additional_port%/*}" counter accept
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             nft add rule inet hotio output oifname "${VPN_CONF}" "${additional_port##*/}" sport "${additional_port%/*}" counter drop
         done
-        nft add rule inet hotio output oifname "${VPN_CONF}" meta l4proto udp counter accept
-        nft add rule inet hotio output oifname "${VPN_CONF}" meta l4proto tcp counter accept
         for nw_cidr in $networks_cidr; do
             nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
         done
-        ipcalc -4 -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" udp dport "${vpn_endpoint_port}" counter accept
+        nft add rule inet hotio output oifname "${VPN_CONF}" counter accept
         nft add rule inet hotio output oifname "lo" counter accept
+        nft add rule inet hotio output icmp type echo-request counter accept
+        nft add rule inet hotio output icmpv6 type echo-request counter accept
+        ipcalc -4 -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" udp dport "${vpn_endpoint_port}" counter accept
+
         # List rules
         nft -s list table inet hotio
     fi
