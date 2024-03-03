@@ -30,7 +30,7 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]]; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Reading regions data from [${CONFIG_DIR}/wireguard/pia-regions.json]."
         region_data=$(cat "${CONFIG_DIR}/wireguard/pia-regions.json")
         if [[ -z "${VPN_PIA_PREFERRED_REGION}" ]]; then
-            VPN_PIA_PREFERRED_REGION=$(jq --arg PF "${VPN_AUTO_PORT_FORWARD}" -re '.regions[] | if $PF=="true" then select(.port_forward==true) else . end | .id' <<< "${region_data}" | sort -R | head -1)
+            VPN_PIA_PREFERRED_REGION=$(jq --arg PF "${VPN_AUTO_PORT_FORWARD}" -re '.regions[] | if $PF=="true" then select(.port_forward==true) else . end | .id' <<< "${region_data}" | shuf | head -1)
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Picking random region [${VPN_PIA_PREFERRED_REGION}]."
         fi
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching server for region [${VPN_PIA_PREFERRED_REGION}]..."
