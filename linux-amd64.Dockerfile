@@ -61,9 +61,15 @@ VOLUME ["${CONFIG_DIR}"]
 ENTRYPOINT ["/init"]
 
 # install packages
-RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unzip p7zip ca-certificates util-linux-misc libcap-utils unbound privoxy iproute2 openresolv wireguard-tools ipcalc iptables nftables dos2unix && \
+RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unzip p7zip ca-certificates util-linux-misc libcap-utils unbound privoxy iproute2 openresolv wireguard-tools ipcalc iptables iptables nftables dos2unix && \
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing wireguard-go && \
-    apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community libnatpmp figlet
+    apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community libnatpmp figlet && \
+    ln -sf xtables-legacy-multi /sbin/iptables && \
+    ln -sf xtables-legacy-multi /sbin/iptables-save && \
+    ln -sf xtables-legacy-multi /sbin/iptables-restore && \
+    ln -sf xtables-legacy-multi /sbin/ip6tables && \
+    ln -sf xtables-legacy-multi /sbin/ip6tables-save && \
+    ln -sf xtables-legacy-multi /sbin/ip6tables-restore
 
 COPY --from=builder6 /usr/bin/unrar /usr/bin/unrar6
 COPY --from=builder7 /usr/bin/unrar /usr/bin/unrar7
