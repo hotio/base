@@ -289,7 +289,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
                 ip6tables -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
             done
             ip6tables -A INPUT -i "${VPN_CONF}" -j ACCEPT
-            ip6tables -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT # Needs more work
+            ip6tables -A INPUT -p ipv6-icmp --icmpv6-type echo-reply -j ACCEPT
 
             # OUTPUT
             IFS=',' read -ra additional_ports <<< "${open_ports%,}"
@@ -298,7 +298,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
                 ip6tables -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
             done
             ip6tables -A OUTPUT -o "${VPN_CONF}" -j ACCEPT
-            ip6tables -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT # Needs more work
+            ip6tables -A OUTPUT -p ipv6-icmp --icmpv6-type echo-request -j ACCEPT
 
             # Show result
             ip6tables -S
