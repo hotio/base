@@ -30,9 +30,9 @@ VOLUME ["${CONFIG_DIR}"]
 ENTRYPOINT ["/init"]
 
 # install packages
-RUN apk add --no-cache tzdata shadow bash curl wget jq grep sed coreutils findutils python3 unzip p7zip ca-certificates libcap-utils unbound privoxy iproute2 openresolv wireguard-tools ipcalc iptables-legacy iptables nftables dos2unix outils-rs && \
+RUN apk add --no-cache bash ca-certificates coreutils curl dos2unix findutils grep ipcalc iproute2 iptables iptables-legacy jq libcap-utils nftables openresolv outils-rs p7zip privoxy python3 sed shadow tzdata unbound unzip wget wireguard-tools && \
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing wireguard-go && \
-    apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community libnatpmp figlet && \
+    apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community figlet libnatpmp && \
     ln -sf xtables-legacy-multi /sbin/iptables && \
     ln -sf xtables-legacy-multi /sbin/iptables-save && \
     ln -sf xtables-legacy-multi /sbin/iptables-restore && \
