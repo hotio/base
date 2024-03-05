@@ -3,12 +3,11 @@ ARG UPSTREAM_DIGEST_AMD64
 
 FROM ubuntu AS builder
 ARG UNRAR_VER=7.0.7
+ADD https://www.rarlab.com/rar/unrarsrc-${UNRAR_VER}.tar.gz /tmp/unrar.tar.gz
 RUN apt update && \
-    apt install -y --no-install-recommends --no-install-suggests \
-    build-essential wget ca-certificates \
+    apt install -y --no-install-recommends --no-install-suggests build-essential \
 # Install unrar from source
 && cd /tmp \
-&& wget https://www.rarlab.com/rar/unrarsrc-${UNRAR_VER}.tar.gz -O /tmp/unrar.tar.gz \
 && tar -xzf /tmp/unrar.tar.gz \
 && cd unrar \
 && sed -i 's|LDFLAGS=-pthread|LDFLAGS=-pthread -static|' makefile \
