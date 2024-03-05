@@ -23,7 +23,7 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]]; then
             if [[ "$(jq -re '.groups.wg[].name' <<< "${region_data}")" == "wireguard" ]]; then
                 echo "${region_data}" > "${CONFIG_DIR}/wireguard/pia-regions.json" && \
                     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Regions data saved in [${CONFIG_DIR}/wireguard/pia-regions.json]."
-                jq -re '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' <<< "${region_data}" | awk 'NR<3{print $0;next}{print $0| "sort"}' | column -t -c 3 -s "|" > "${CONFIG_DIR}/wireguard/pia-regions.txt" && \
+                jq -re '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' <<< "${region_data}" | awk 'NR<3{print $0;next}{print $0| "sort"}' | rs -c\| 0 3 > "${CONFIG_DIR}/wireguard/pia-regions.txt" && \
                     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Regions list saved in [${CONFIG_DIR}/wireguard/pia-regions.txt]."
             fi
         done
