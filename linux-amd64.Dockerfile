@@ -3,26 +3,14 @@ ARG UPSTREAM_DIGEST_AMD64
 
 FROM alpine AS builder
 ARG UNRAR_VER=7.0.7
-RUN apk --update --no-cache add \
-    autoconf \
-    automake \
-    binutils \
-    build-base \
-    cmake \
-    cppunit-dev \
-    curl-dev \
-    libtool \
-    linux-headers \
-    zlib-dev \
-# Install unrar from source
-&& cd /tmp \
-&& wget https://www.rarlab.com/rar/unrarsrc-${UNRAR_VER}.tar.gz -O /tmp/unrar.tar.gz \
-&& tar -xzf /tmp/unrar.tar.gz \
-&& cd unrar \
-&& sed -i 's|LDFLAGS=-pthread|LDFLAGS=-pthread -static|' makefile \
-&& sed -i 's|CXXFLAGS=-march=native|CXXFLAGS=-march=x86-64-v2|' makefile \
-&& make -f makefile \
-&& install -Dm 755 unrar /usr/bin/unrar
+ADD https://www.rarlab.com/rar/unrarsrc-${UNRAR_VER}.tar.gz /tmp/unrar.tar.gz
+RUN apk --update --no-cache add build-base && \
+    tar -xzf /tmp/unrar.tar.gz && \
+    cd unrar && \
+    sed -i 's|LDFLAGS=-pthread|LDFLAGS=-pthread -static|' makefile && \
+    sed -i 's|CXXFLAGS=-march=native|CXXFLAGS=-march=x86-64-v2|' makefile && \
+    make -f makefile && \
+    install -Dm 755 unrar /usr/bin/unrar
 
 
 FROM ${UPSTREAM_IMAGE}@${UPSTREAM_DIGEST_AMD64}
