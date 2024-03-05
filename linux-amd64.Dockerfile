@@ -34,9 +34,7 @@ ARG DEBIAN_FRONTEND="noninteractive"
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
-        ca-certificates jq curl wget wget2 unzip xz-utils p7zip-full python3 bsdmainutils figlet libcap2-bin \
-        locales tzdata \
-        privoxy iptables nftables iproute2 openresolv wireguard-tools ipcalc-ng wireguard-go natpmpc unbound dos2unix kmod iputils-ping && \
+        ca-certificates curl dos2unix figlet ipcalc-ng iproute2 iptables iputils-ping jq kmod libcap2-bin locales natpmpc nftables openresolv p7zip-full privoxy python3 rs tzdata unbound unzip wget wget2 wireguard-go wireguard-tools xz-utils && \
     ln -s ipcalc-ng /usr/bin/ipcalc && \
     update-alternatives --set iptables /usr/sbin/iptables-legacy && \
     update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy && \
