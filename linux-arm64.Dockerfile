@@ -1,5 +1,22 @@
 ARG UPSTREAM_IMAGE
 ARG UPSTREAM_DIGEST_ARM64
+
+FROM ubuntu AS builder
+ARG UNRAR_VER=7.0.7
+RUN apt update && \
+    apt install -y --no-install-recommends --no-install-suggests \
+    build-essential wget ca-certificates \
+# Install unrar from source
+&& cd /tmp \
+&& wget https://www.rarlab.com/rar/unrarsrc-${UNRAR_VER}.tar.gz -O /tmp/unrar.tar.gz \
+&& tar -xzf /tmp/unrar.tar.gz \
+&& cd unrar \
+&& sed -i 's|LDFLAGS=-pthread|LDFLAGS=-pthread -static|' makefile \
+&& sed -i 's|CXXFLAGS=-march=native|CXXFLAGS=-march=armv8-a|' makefile \
+&& make -f makefile \
+&& install -Dm 755 unrar /usr/bin/unrar
+
+
 FROM ${UPSTREAM_IMAGE}@${UPSTREAM_DIGEST_ARM64}
 
 ARG IMAGE_STATS
@@ -20,7 +37,7 @@ ARG DEBIAN_FRONTEND="noninteractive"
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
-        ca-certificates jq curl wget wget2 unzip xz-utils p7zip-full unrar python3 bsdmainutils figlet libcap2-bin \
+        ca-certificates jq curl wget wget2 unzip xz-utils p7zip-full python3 bsdmainutils figlet libcap2-bin \
         locales tzdata \
         privoxy iptables nftables iproute2 openresolv wireguard-tools ipcalc-ng wireguard-go natpmpc unbound dos2unix kmod iputils-ping && \
     ln -s ipcalc-ng /usr/bin/ipcalc && \
@@ -32,6 +49,8 @@ RUN apt update && \
     apt autoremove -y && \
     apt clean && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
+
+COPY --from=builder /usr/bin/unrar /usr/bin/unrar
 
 # https://github.com/just-containers/s6-overlay/releases
 ARG VERSION_S6
