@@ -76,9 +76,3 @@ if [[ ! -f "${CONFIG_DIR}/privoxy/privoxy.conf" ]] && [[ "${PRIVOXY_ENABLED}" ==
     cp "${APP_DIR}/privoxy.conf" "${CONFIG_DIR}/privoxy/privoxy.conf"
     find "${CONFIG_DIR}/privoxy" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
 fi
-
-if /usr/bin/unrar7 -V > /dev/null 2>&1; then
-    ln -sf unrar7 /usr/bin/unrar
-else
-    ln -sf unrar6 /usr/bin/unrar
-fi
