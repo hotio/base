@@ -9,7 +9,7 @@ RUN apt update && \
     tar -xzf /tmp/unrar.tar.gz && \
     cd unrar && \
     sed -i 's|LDFLAGS=-pthread|LDFLAGS=-pthread -static|' makefile && \
-    sed -i 's|CXXFLAGS=-march=native|CXXFLAGS=-march=x86-64-v2|' makefile && \
+    sed -i 's|CXXFLAGS=-march=native |CXXFLAGS=|' makefile && \
     make -f makefile && \
     install -Dm 755 unrar /usr/bin/unrar
 
