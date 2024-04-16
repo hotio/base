@@ -1,7 +1,7 @@
 {
   "description": "Ubuntu 22.04",
   "upstream_digest_amd64": "sha256:aa772c98400ef833586d1d517d3e8de670f7e712bf581ce6053165081773259d",
-  "upstream_digest_arm64": "sha256:7185d738658e31c96b3ba0f9deaae1df46a5c405dc82025094a51e5e2072212a",
+  "upstream_digest_arm64": "sha256:c427cc251a507a2459eacd770fe2cd7e451f883b077e09b2d27fa6f129b29d81",
   "upstream_image": "ubuntu",
   "upstream_tag": "22.04",
   "version": "3.1.6.2",
