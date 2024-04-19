@@ -169,6 +169,10 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     set -e
 
     vpn_endpoint=$(wg show | grep endpoint: | awk '{print $2}')
+    if [[ -z ${vpn_endpoint} ]]; then
+        echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard [${VPN_CONF}] endpoint not found!"
+        exit 1
+    fi
     vpn_endpoint_ip="${vpn_endpoint%:*}"
     vpn_endpoint_port="${vpn_endpoint##*:}"
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard [${VPN_CONF}] endpoint [${vpn_endpoint_ip}][${vpn_endpoint_port}]."
