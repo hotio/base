@@ -249,19 +249,20 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         # INPUT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
-            iptables -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j ACCEPT
+            iptables -A INPUT -i "${nw_interface}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -d "${default_ip}" -j ACCEPT
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             iptables -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
         done
         while IFS= read -r network; do
             nw_if=$(awk '{print $3}' <<< "${network}")
             nw_cidr=$(awk '{print $1}' <<< "${network}")
-            iptables -A INPUT -i "${nw_if}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+            nw_ip=$(awk '{print $7}' <<< "${network}")
+            iptables -A INPUT -i "${nw_if}" -s "${nw_cidr}" -d "${nw_ip}" -j ACCEPT
         done <<< "${networks}"
         if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
-                iptables -A INPUT -i "${nw_interface}" -s "${lan_network}" -j ACCEPT
+                iptables -A INPUT -i "${nw_interface}" -s "${lan_network}" -d "${default_ip}" -j ACCEPT
             done
         fi
         iptables -A INPUT -i "${VPN_CONF}" -j ACCEPT
@@ -272,19 +273,20 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         # OUTPUT
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
-            iptables -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j ACCEPT
+            iptables -A OUTPUT -o "${nw_interface}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -s "${default_ip}" -j ACCEPT
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             iptables -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
         done
         while IFS= read -r network; do
             nw_if=$(awk '{print $3}' <<< "${network}")
             nw_cidr=$(awk '{print $1}' <<< "${network}")
-            iptables -A OUTPUT -o "${nw_if}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+            nw_ip=$(awk '{print $7}' <<< "${network}")
+            iptables -A OUTPUT -o "${nw_if}" -s "${nw_ip}" -d "${nw_cidr}" -j ACCEPT
         done <<< "${networks}"
         if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
-                iptables -A OUTPUT -o "${nw_interface}" -d "${lan_network}" -j ACCEPT
+                iptables -A OUTPUT -o "${nw_interface}" -s "${default_ip}" -d "${lan_network}" -j ACCEPT
             done
         fi
         iptables -A OUTPUT -o "${VPN_CONF}" -j ACCEPT
@@ -333,19 +335,20 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         # Create input rules
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
-            nft add rule inet hotio input iifname "${nw_interface}" "${additional_port##*/}" dport "${additional_port%/*}" counter accept
+            nft add rule inet hotio input iifname "${nw_interface}" "${additional_port##*/}" dport "${additional_port%/*}" ip daddr "${default_ip}" counter accept
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             nft add rule inet hotio input iifname "${VPN_CONF}" "${additional_port##*/}" dport "${additional_port%/*}" counter drop
         done
         while IFS= read -r network; do
             nw_if=$(awk '{print $3}' <<< "${network}")
             nw_cidr=$(awk '{print $1}' <<< "${network}")
-            nft add rule inet hotio input iifname "${nw_if}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
+            nw_ip=$(awk '{print $7}' <<< "${network}")
+            nft add rule inet hotio input iifname "${nw_if}" ip saddr "${nw_cidr}" ip daddr "${nw_ip}" counter accept
         done <<< "${networks}"
         if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
-                nft add rule inet hotio input iifname "${nw_interface}" ip saddr "${lan_network}" counter accept
+                nft add rule inet hotio input iifname "${nw_interface}" ip saddr "${lan_network}" ip daddr "${default_ip}" counter accept
             done
         fi
         nft add rule inet hotio input iifname "${VPN_CONF}" counter accept
@@ -357,19 +360,20 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         # Create output rules
         IFS=',' read -ra additional_ports <<< "${open_ports%,}"
         for additional_port in "${additional_ports[@]}"; do
-            nft add rule inet hotio output oifname "${nw_interface}" "${additional_port##*/}" sport "${additional_port%/*}" counter accept
+            nft add rule inet hotio output oifname "${nw_interface}" "${additional_port##*/}" sport "${additional_port%/*}" ip saddr "${default_ip}" counter accept
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             nft add rule inet hotio output oifname "${VPN_CONF}" "${additional_port##*/}" sport "${additional_port%/*}" counter drop
         done
         while IFS= read -r network; do
             nw_if=$(awk '{print $3}' <<< "${network}")
             nw_cidr=$(awk '{print $1}' <<< "${network}")
-            nft add rule inet hotio output oifname "${nw_if}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
+            nw_ip=$(awk '{print $7}' <<< "${network}")
+            nft add rule inet hotio output oifname "${nw_if}" ip saddr "${nw_ip}" ip daddr "${nw_cidr}" counter accept
         done <<< "${networks}"
         if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
-                nft add rule inet hotio output oifname "${nw_interface}" ip daddr "${lan_network}" counter accept
+                nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${lan_network}" counter accept
             done
         fi
         nft add rule inet hotio output oifname "${VPN_CONF}" counter accept
