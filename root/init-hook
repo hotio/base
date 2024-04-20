@@ -23,5 +23,8 @@ fi
 
 if [[ "${VPN_ENABLED}" != true ]]; then
     rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-forwarder
+fi
+
+if [[ "${VPN_ENABLED}" != true ]] || [[ "${VPN_HEALTHCHECK_ENABLED}" != true ]]; then
     rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-healthcheck
 fi
