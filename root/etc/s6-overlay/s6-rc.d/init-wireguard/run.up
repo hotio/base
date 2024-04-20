@@ -184,7 +184,6 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     nw_interface=$(awk '{print $5}' <<< "${nw_default}")
     nw_gateway=$(awk '{print $3}' <<< "${nw_default}")
     networks="$(ip -o -4 route show proto kernel | grep -v "${VPN_CONF}")"
-    networks_cidr=$(awk '{print $1}' <<< "${networks}")
     while IFS= read -r network; do
         default_note="         "
         [[ "$(awk '{print $3}' <<< "${network}")" == "${nw_interface}" ]] && default_ip=$(awk '{print $7}' <<< "${network}") && default_note="[default]"
@@ -254,9 +253,11 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             iptables -I INPUT -i "${VPN_CONF}" -p "${additional_port##*/}" --dport "${additional_port%/*}" -j DROP
         done
-        for nw_cidr in $networks_cidr; do
-            iptables -A INPUT -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
-        done
+        while IFS= read -r network; do
+            nw_if=$(awk '{print $3}' <<< "${network}")
+            nw_cidr=$(awk '{print $1}' <<< "${network}")
+            iptables -A INPUT -i "${nw_if}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+        done <<< "${networks}"
         if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
@@ -275,9 +276,11 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             iptables -I OUTPUT -o "${VPN_CONF}" -p "${additional_port##*/}" --sport "${additional_port%/*}" -j DROP
         done
-        for nw_cidr in $networks_cidr; do
-            iptables -A OUTPUT -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
-        done
+        while IFS= read -r network; do
+            nw_if=$(awk '{print $3}' <<< "${network}")
+            nw_cidr=$(awk '{print $1}' <<< "${network}")
+            iptables -A OUTPUT -o "${nw_if}" -s "${nw_cidr}" -d "${nw_cidr}" -j ACCEPT
+        done <<< "${networks}"
         if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
@@ -334,9 +337,11 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             nft add rule inet hotio input iifname "${VPN_CONF}" "${additional_port##*/}" dport "${additional_port%/*}" counter drop
         done
-        for nw_cidr in $networks_cidr; do
-            nft add rule inet hotio input ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
-        done
+        while IFS= read -r network; do
+            nw_if=$(awk '{print $3}' <<< "${network}")
+            nw_cidr=$(awk '{print $1}' <<< "${network}")
+            nft add rule inet hotio input iifname "${nw_if}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
+        done <<< "${networks}"
         if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
@@ -356,9 +361,11 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
             nft add rule inet hotio output oifname "${VPN_CONF}" "${additional_port##*/}" sport "${additional_port%/*}" counter drop
         done
-        for nw_cidr in $networks_cidr; do
-            nft add rule inet hotio output ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
-        done
+        while IFS= read -r network; do
+            nw_if=$(awk '{print $3}' <<< "${network}")
+            nw_cidr=$(awk '{print $1}' <<< "${network}")
+            nft add rule inet hotio output oifname "${nw_if}" ip saddr "${nw_cidr}" ip daddr "${nw_cidr}" counter accept
+        done <<< "${networks}"
         if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
