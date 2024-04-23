@@ -1,8 +1,8 @@
 #!/command/with-contenv bash
 # shellcheck shell=bash
 
-if [[ ! -d "/etc/s6-overlay/s6-rc.d/init-setup-app" ]] && [[ -f "/etc/s6-overlay/s6-rc.d/init-wireguard/dependencies.d/init-setup-app" ]]; then
-    mv "/etc/s6-overlay/s6-rc.d/init-wireguard/dependencies.d/init-setup-app" "/etc/s6-overlay/s6-rc.d/init-wireguard/dependencies.d/init-setup"
+if [[ -d "/etc/s6-overlay/s6-rc.d/init-setup-app" ]]; then
+    mv "/etc/s6-overlay/s6-rc.d/init-wireguard/dependencies.d/init-setup" "/etc/s6-overlay/s6-rc.d/init-wireguard/dependencies.d/init-setup-app"
 fi
 
 if [[ "${PRIVOXY_ENABLED}" != true ]]; then
@@ -27,4 +27,9 @@ fi
 
 if [[ "${VPN_ENABLED}" != true ]] || [[ "${VPN_HEALTHCHECK_ENABLED}" != true ]]; then
     rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-healthcheck
+fi
+
+# shellcheck source=/dev/null
+if [[ -f /etc/s6-overlay/init-hook-app ]]; then
+    source /etc/s6-overlay/init-hook-app
 fi
