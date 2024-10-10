@@ -4,6 +4,6 @@
   "upstream_digest_arm64": "sha256:e910e9408f39003d77ec0f83b18c8892d6899c0a8d4d53f35a67596c33ebfa1d",
   "upstream_image": "alpine",
   "upstream_tag": "3.19",
-  "version": "3.2.0.1",
-  "version_s6": "3.2.0.1"
+  "version": "3.2.0.2",
+  "version_s6": "3.2.0.2"
 }
