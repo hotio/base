@@ -1,7 +1,7 @@
 {
   "description": "Alpine 3.19",
-  "upstream_digest_amd64": "sha256:f11993ab46a7e9f2d09007f8b7cbcc75e48e3691f9ae8d579fe4cb988d7b4ccd",
-  "upstream_digest_arm64": "sha256:e910e9408f39003d77ec0f83b18c8892d6899c0a8d4d53f35a67596c33ebfa1d",
+  "upstream_digest_amd64": "sha256:408389300eedd092c25c5f0875170aca46a7bada1fd4008d6c037f12ef82a2f0",
+  "upstream_digest_arm64": "sha256:b67a97b3aa97ecd03bfbc01ec440094e61bf17057db014b2e710ec553900f382",
   "upstream_image": "alpine",
   "upstream_tag": "3.19",
   "version": "3.2.0.2",
