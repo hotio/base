@@ -192,12 +192,12 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
     for lan_network in "${lan_networks[@]}"; do
-        ip route add "${lan_network}" via "${nw_gateway}" dev "${nw_interface}"
+        ip route replace "${lan_network}" via "${nw_gateway}" dev "${nw_interface}"
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added [${lan_network}][LAN] as route via interface [${nw_interface}]."
     done
 
     if [[ "${VPN_CONF}" == *"-fix" ]]; then
-        ip route add "${vpn_endpoint_ip}" via "${nw_gateway}" dev "${nw_interface}"
+        ip route replace "${vpn_endpoint_ip}" via "${nw_gateway}" dev "${nw_interface}"
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added [${vpn_endpoint_ip}][${VPN_CONF}] as route via interface [${nw_interface}]."
     fi
 
