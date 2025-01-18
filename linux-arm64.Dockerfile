@@ -33,12 +33,12 @@ ENTRYPOINT ["/init"]
 RUN apk add --no-cache bash ca-certificates coreutils curl dos2unix findutils grep ipcalc iproute2 iptables iptables-legacy jq libcap-utils nftables openresolv outils-rs p7zip privoxy python3 sed shadow tzdata unbound unzip wget wireguard-tools && \
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing wireguard-go && \
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community figlet libnatpmp && \
-    ln -sf xtables-legacy-multi /sbin/iptables && \
-    ln -sf xtables-legacy-multi /sbin/iptables-save && \
-    ln -sf xtables-legacy-multi /sbin/iptables-restore && \
-    ln -sf xtables-legacy-multi /sbin/ip6tables && \
-    ln -sf xtables-legacy-multi /sbin/ip6tables-save && \
-    ln -sf xtables-legacy-multi /sbin/ip6tables-restore
+    ln -sf xtables-legacy-multi /usr/sbin/iptables && \
+    ln -sf xtables-legacy-multi /usr/sbin/iptables-save && \
+    ln -sf xtables-legacy-multi /usr/sbin/iptables-restore && \
+    ln -sf xtables-legacy-multi /usr/sbin/ip6tables && \
+    ln -sf xtables-legacy-multi /usr/sbin/ip6tables-save && \
+    ln -sf xtables-legacy-multi /usr/sbin/ip6tables-restore
 
 COPY --from=builder /usr/bin/unrar /usr/bin/unrar
 
