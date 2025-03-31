@@ -47,7 +47,6 @@ VPN_LAN_LEAK_ENABLED=${VPN_LAN_LEAK_ENABLED}
 VPN_EXPOSE_PORTS_ON_LAN=${VPN_EXPOSE_PORTS_ON_LAN}
 VPN_AUTO_PORT_FORWARD=${VPN_AUTO_PORT_FORWARD}
 VPN_AUTO_PORT_FORWARD_TO_PORTS=${VPN_AUTO_PORT_FORWARD_TO_PORTS}
-VPN_KEEP_LOCAL_DNS=${VPN_KEEP_LOCAL_DNS}
 VPN_FIREWALL_TYPE=${VPN_FIREWALL_TYPE}
 VPN_HEALTHCHECK_ENABLED=${VPN_HEALTHCHECK_ENABLED}
 VPN_PIA_USER=$(mask "${VPN_PIA_USER}")
@@ -77,4 +76,13 @@ if [[ ! -f "${CONFIG_DIR}/privoxy/privoxy.conf" ]] && [[ "${PRIVOXY_ENABLED}" ==
     mkdir -p "${CONFIG_DIR}/privoxy"
     cp "${APP_DIR}/privoxy.conf" "${CONFIG_DIR}/privoxy/privoxy.conf"
     find "${CONFIG_DIR}/privoxy" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
+fi
+
+if [[ ! -f "${CONFIG_DIR}/unbound/unbound.conf" ]]; then
+    if [[ "${UNBOUND_ENABLED}" == true ]] || [[ "${VPN_ENABLED}" == true ]]; then
+        echo "Installing default \"unbound.conf\"..."
+        mkdir -p "${CONFIG_DIR}/unbound"
+        cp "${APP_DIR}/unbound.conf" "${CONFIG_DIR}/unbound/unbound.conf"
+        find "${CONFIG_DIR}/unbound" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
+    fi
 fi

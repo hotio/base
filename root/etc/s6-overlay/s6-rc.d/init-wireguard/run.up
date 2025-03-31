@@ -120,10 +120,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         if [[ "${VPN_CONF}" == *"-fix" ]]; then
             sed -i 's#0.0.0.0/0#0.0.0.0/1,128.0.0.0/1#g' "/dev/shm/${VPN_CONF}.conf" # Synology Fix
         fi
-        if [[ "${UNBOUND_ENABLED}" == "true" ]]; then
-            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] DNS servers from [${VPN_CONF}] will be ignored in favor of Unbound."
-            sed -i 's#DNS.*##g' "/dev/shm/${VPN_CONF}.conf"
-        fi
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] DNS servers from [${VPN_CONF}] will be ignored in favor of Unbound."
+        sed -i 's#DNS.*##g' "/dev/shm/${VPN_CONF}.conf"
     fi
 
     if [[ "${VPN_FIREWALL_TYPE}" == "legacy" ]] || ( ! grep -q nf_tables < /proc/modules && [[ "${VPN_FIREWALL_TYPE}" != "nftables" ]] ); then
@@ -157,12 +155,6 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         fi
     done
 
-    if [[ "${VPN_KEEP_LOCAL_DNS}" == "true" ]] && [[ "${UNBOUND_ENABLED}" != "true" ]] && [[ -f /etc/resolv.conf.bak ]]; then
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Restoring docker DNS server to resolv.conf."
-        cat /etc/resolv.conf.bak >> "/etc/resolv.conf"
-    else
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] No modifications will be done to resolv.conf."
-    fi
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] resolv.conf is:"
     cat "/etc/resolv.conf"
 
