@@ -18,7 +18,7 @@ FROM ${UPSTREAM_IMAGE}@${UPSTREAM_DIGEST_AMD64}
 ARG IMAGE_STATS
 ARG BUILD_ARCHITECTURE
 ENV IMAGE_STATS=${IMAGE_STATS} BUILD_ARCHITECTURE=${BUILD_ARCHITECTURE} \
-    APP_DIR="/app" CONFIG_DIR="/config" PUID="1000" PGID="1000" UMASK="002" TZ="Etc/UTC" \
+    APP_DIR="/app" CONFIG_DIR="/config" PUID="1001" PGID="1001" UMASK="002" TZ="Etc/UTC" \
     XDG_CONFIG_HOME="${CONFIG_DIR}/.config" XDG_CACHE_HOME="${CONFIG_DIR}/.cache" XDG_DATA_HOME="${CONFIG_DIR}/.local/share" \
     LANG="en_US.UTF-8" LANGUAGE="en_US:en" LC_ALL="en_US.UTF-8" \
     S6_BEHAVIOUR_IF_STAGE2_FAILS=2 S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 S6_SERVICES_GRACETIME=180000 S6_STAGE2_HOOK="/etc/s6-overlay/init-hook" \
@@ -53,7 +53,7 @@ RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/
 RUN mkdir "${APP_DIR}" && \
     mkdir "${CONFIG_DIR}" && \
 # create user
-    useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
+    useradd -u 1001 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
     usermod -G users hotio
 
 COPY root/ /
