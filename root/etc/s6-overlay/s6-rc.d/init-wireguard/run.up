@@ -6,6 +6,12 @@ source /etc/s6-overlay/scripts/pia-functions
 
 umask "${UMASK}"
 
+if [[ ${VPN_ENABLED} == "true" ]]; then
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Setting default DNS server to [1.1.1.1] until Unbound starts."
+    echo "# Temporary Cloudlfare" > "/etc/resolv.conf"
+    echo "nameserver 1.1.1.1" >> "/etc/resolv.conf"
+fi
+
 if [[ ${VPN_ENABLED} == "true" ]] && [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
     mkdir "${CONFIG_DIR}/wireguard"
     find "${CONFIG_DIR}/wireguard" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
@@ -120,7 +126,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         if [[ "${VPN_CONF}" == *"-fix" ]]; then
             sed -i 's#0.0.0.0/0#0.0.0.0/1,128.0.0.0/1#g' "/dev/shm/${VPN_CONF}.conf" # Synology Fix
         fi
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] DNS servers from [${VPN_CONF}] will be ignored in favor of Unbound."
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] DNS servers from [${VPN_CONF}] will be ignored!"
         sed -i 's#DNS.*##g' "/dev/shm/${VPN_CONF}.conf"
     fi
 
@@ -154,9 +160,6 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             sleep 5
         fi
     done
-
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] resolv.conf is:"
-    cat "/etc/resolv.conf"
 
     set -e
 
@@ -382,6 +385,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh" ]] && bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh"
 
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Nslookup result for [wtfismyip.com]:"
+    nslookup wtfismyip.com
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Performing internet connectivity test..."
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [IPV4] [PING: $(ping -c 5 1.1.1.1 2> /dev/null | tail -1 | awk -F ' = ' '{print $2}')] $(curl -fsL -4 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')"
     if [[ ${ipv6_wanted} == "true" ]]; then
