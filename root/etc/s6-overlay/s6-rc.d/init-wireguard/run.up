@@ -7,7 +7,7 @@ source /etc/s6-overlay/scripts/pia-functions
 umask "${UMASK}"
 
 if [[ ${VPN_ENABLED} == "true" ]]; then
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Setting default DNS server to [1.1.1.1] until Unbound starts."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Setting default nameserver to [1.1.1.1] until Unbound starts."
     echo "nameserver 1.1.1.1" > "/etc/resolv.conf"
 fi
 
