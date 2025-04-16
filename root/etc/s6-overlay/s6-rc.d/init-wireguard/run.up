@@ -79,6 +79,7 @@ if [[ ${VPN_ENABLED} == "true" ]] && [[ ${VPN_PROVIDER} == "pia" ]]; then
         echo "AllowedIPs = 0.0.0.0/0"
         echo "Endpoint = ${pia_server_ip}:$(jq -re '.server_port' <<< "${wg_json_response}")"
         } > "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
+        find "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] WireGuard config written to [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf]."
     fi
 fi
@@ -128,9 +129,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Configuration file [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf] was not found. Exiting..."
         exit 1
     else
-        find "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
-        chmod 600 "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
         dos2unix -q -n "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" "/dev/shm/${VPN_CONF}.conf"
+        chmod 600 "/dev/shm/${VPN_CONF}.conf"
         if [[ "${VPN_CONF}" == *"-fix" ]]; then
             sed -i 's#0.0.0.0/0#0.0.0.0/1,128.0.0.0/1#g' "/dev/shm/${VPN_CONF}.conf" # Synology Fix
         fi
