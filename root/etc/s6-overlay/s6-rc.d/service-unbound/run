@@ -3,6 +3,33 @@
 
 umask "${UMASK}"
 
+if [[ "${VPN_ENABLED}" != true ]]; then
+    for nameserver in ${UNBOUND_NAMESERVERS//,/ }; do
+        if [[ "${nameserver}" == *"@"* ]]; then
+            nameservers_dot+=( "${nameserver}" )
+            continue
+        fi
+        nameservers+=( "${nameserver}" )
+    done
+    cp "${APP_DIR}/unbound.conf" "/dev/shm/unbound.conf"
+    if [[ ${#nameservers_dot[@]} -gt 0 ]] || [[ ${#nameservers[@]} -gt 0 ]]; then
+        echo '    forward-zone:' >> "/dev/shm/unbound.conf"
+        echo '        name: "."' >> "/dev/shm/unbound.conf"
+    fi
+    if [[ ${#nameservers_dot[@]} -gt 0 ]]; then
+        echo '        forward-tls-upstream: yes' >> "/dev/shm/unbound.conf"
+        for nameserver in "${nameservers_dot[@]}"; do
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [UNBOUND] Adding nameserver [${nameserver}] to Unbound."
+            echo "        forward-addr: ${nameserver}" >> "/dev/shm/unbound.conf"
+        done
+    elif [[ ${#nameservers[@]} -gt 0 ]]; then
+        for nameserver in "${nameservers[@]}"; do
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [UNBOUND] Adding nameserver [${nameserver}] to Unbound."
+            echo "        forward-addr: ${nameserver}" >> "/dev/shm/unbound.conf"
+        done
+    fi
+fi
+
 echo "nameserver 127.0.0.1" > "/etc/resolv.conf"
 
 /usr/sbin/unbound -c "/dev/shm/unbound.conf" -d -p
