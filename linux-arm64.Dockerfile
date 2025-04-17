@@ -62,5 +62,7 @@ RUN mkdir "${APP_DIR}" && \
     useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false hotio && \
     usermod -G users hotio
 
-COPY root/ /
-RUN chmod +x /etc/s6-overlay/init-hook
+# install root-files
+ARG VERSION_ROOT_FILES
+RUN curl -fsSL "https://github.com/hotio/root-files/archive/${VERSION_ROOT_FILES}.tar.gz" | tar zpxf - -C / "root-files-${VERSION_ROOT_FILES}/root" --strip-components=2 && \
+    chmod +x /etc/s6-overlay/init-hook
