@@ -1,0 +1,45 @@
+# shellcheck shell=bash
+
+setup_nameservers () {
+    if [[ "${VPN_ENABLED}" != true ]]; then
+        TYPE="UNBOUND"
+        NAMESERVERS="${UNBOUND_NAMESERVERS}"
+    else
+        TYPE="VPN"
+        NAMESERVERS="${VPN_NAMESERVERS}"
+    fi
+    for nameserver in ${NAMESERVERS//,/ }; do
+        if [[ "${nameserver}" == "wg" ]] && [[ "${TYPE}" == "VPN" ]]; then
+            wg_nameservers=$(grep 'DNS' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
+            for wg_nameserver in ${wg_nameservers//,/ }; do
+                nameservers+=( "${wg_nameserver}" )
+            done
+            continue
+        fi
+        if [[ "${nameserver}" == "wg" ]] && [[ "${TYPE}" == "UNBOUND" ]]; then
+            continue
+        fi
+        if [[ "${nameserver}" == *"@"* ]]; then
+            nameservers_dot+=( "${nameserver}" )
+            continue
+        fi
+        nameservers+=( "${nameserver}" )
+    done
+    cp "${APP_DIR}/unbound.conf" "/dev/shm/unbound.conf"
+    if [[ ${#nameservers_dot[@]} -gt 0 ]] || [[ ${#nameservers[@]} -gt 0 ]]; then
+        echo '    forward-zone:' >> "/dev/shm/unbound.conf"
+        echo '        name: "."' >> "/dev/shm/unbound.conf"
+    fi
+    if [[ ${#nameservers_dot[@]} -gt 0 ]]; then
+        echo '        forward-tls-upstream: yes' >> "/dev/shm/unbound.conf"
+        for nameserver in "${nameservers_dot[@]}"; do
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [UNBOUND] Adding nameserver [${TYPE}][${nameserver}]."
+            echo "        forward-addr: ${nameserver}" >> "/dev/shm/unbound.conf"
+        done
+    elif [[ ${#nameservers[@]} -gt 0 ]]; then
+        for nameserver in "${nameservers[@]}"; do
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [UNBOUND] Adding nameserver [${TYPE}][${nameserver}]."
+            echo "        forward-addr: ${nameserver}" >> "/dev/shm/unbound.conf"
+        done
+    fi
+}
