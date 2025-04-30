@@ -5,6 +5,6 @@
   "upstream_image": "alpine",
   "upstream_tag": "3.21",
   "version": "3.2.0.2",
-  "version_root_files": "1",
+  "version_root_files": "2",
   "version_s6": "3.2.0.2"
 }
