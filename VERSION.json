@@ -1,5 +1,5 @@
 {
-  "description": "Alpine 3.21",
+  "description": "Alpine 3.22",
   "upstream_digest_amd64": "sha256:08001109a7d679fe33b04fa51d681bd40b975d8f5cea8c3ef6c0eccb6a7338ce",
   "upstream_digest_arm64": "sha256:008448246686fe28544e36ba89e7bc7fbe6dad8a2ccdef576875c74298c46348",
   "upstream_image": "alpine",
