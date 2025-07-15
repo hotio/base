@@ -2,13 +2,13 @@
   "alpinevpn": {
     "description": "Alpine 3.22",
     "hide": false,
-    "last_updated": "2025-06-05T05:52:30.000Z",
-    "last_updated_url": "https://github.com/hotio/base/actions/runs/15459436577",
+    "last_updated": "2025-07-15T22:29:31.000Z",
+    "last_updated_url": "https://github.com/hotio/base/actions/runs/16305604928",
     "latest": false,
     "tags": [
       "alpinevpn",
       "alpinevpn-3.2.1.0",
-      "alpinevpn-c39a495"
+      "alpinevpn-50835fe"
     ]
   },
   "noblevpn": {
