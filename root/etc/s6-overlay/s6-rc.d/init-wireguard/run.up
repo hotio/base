@@ -208,8 +208,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh" ]] && bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh"
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Performing internet connectivity tests [after 3 seconds]..."
-    sleep 3
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Performing internet connectivity tests..."
 
     ping4=$(ping -c 5 1.1.1.1 2> /dev/null | tail -1 | awk -F ' = ' '{print $2}')
     if [[ -z ${ping4} ]]; then
