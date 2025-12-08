@@ -204,7 +204,6 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     # List rules
     nft -s list table inet hotio
 
-
     set +e
 
     [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh" ]] && bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh"
