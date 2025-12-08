@@ -1,0 +1,22 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+umask "${UMASK}"
+
+vpn_gw=$(grep Address "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
+vpn_gw="${vpn_gw%.*}.1"
+
+while true; do
+    if ! natpmpc -g "${vpn_gw}" &> /dev/null; then
+        echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Endpoint [${vpn_gw%.*}.1] does not support port forwarding!"
+    else
+        port=$(natpmpc -g "${vpn_gw}" -a 1 0 udp 60 | grep -P -o -m 1 '(?<=Mapped public port\s)\d+')
+        if [[ -n "${port}" ]]; then
+            natpmpc -g "${vpn_gw}" -a 1 0 tcp 60 &> /dev/null
+            echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
+        else
+            echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Port forwarding failed!"
+        fi
+    fi
+    sleep 45
+done

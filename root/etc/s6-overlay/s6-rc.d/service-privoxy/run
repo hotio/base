@@ -1,0 +1,13 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+umask "${UMASK}"
+
+if [[ ! -f "${CONFIG_DIR}/privoxy/privoxy.conf" ]]; then
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PRIVOXY] Installing default \"privoxy.conf\"..."
+    mkdir -p "${CONFIG_DIR}/privoxy"
+    cp "${APP_DIR}/privoxy.conf" "${CONFIG_DIR}/privoxy/privoxy.conf"
+    find "${CONFIG_DIR}/privoxy" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
+fi
+
+exec s6-setuidgid hotio /usr/sbin/privoxy --no-daemon "${CONFIG_DIR}/privoxy/privoxy.conf"

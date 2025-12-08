@@ -1,0 +1,35 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+if [[ -d "/etc/s6-overlay/s6-rc.d/init-setup-app" ]] && [[ -f "/etc/s6-overlay/s6-rc.d/init-wireguard/dependencies.d/init-setup" ]]; then
+    mv "/etc/s6-overlay/s6-rc.d/init-wireguard/dependencies.d/init-setup" "/etc/s6-overlay/s6-rc.d/init-wireguard/dependencies.d/init-setup-app"
+fi
+
+if [[ "${PRIVOXY_ENABLED}" != true ]]; then
+    rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-privoxy
+fi
+
+if [[ "${UNBOUND_ENABLED}" != true ]] && [[ "${VPN_ENABLED}" != true ]]; then
+    rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-unbound
+fi
+
+if [[ "${VPN_PROVIDER}" != "proton" ]] || [[ "${VPN_ENABLED}" != true ]] || [[ "${VPN_AUTO_PORT_FORWARD}" != true ]]; then
+    rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-proton
+fi
+
+if [[ "${VPN_PROVIDER}" != "pia" ]] || [[ "${VPN_ENABLED}" != true ]] || [[ "${VPN_AUTO_PORT_FORWARD}" != true ]]; then
+    rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-pia
+fi
+
+if [[ "${VPN_ENABLED}" != true ]]; then
+    rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-forwarder
+fi
+
+if [[ "${VPN_ENABLED}" != true ]] || [[ "${VPN_HEALTHCHECK_ENABLED}" != true ]]; then
+    rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/service-healthcheck
+fi
+
+# shellcheck source=/dev/null
+if [[ -f /etc/s6-overlay/init-hook-app ]]; then
+    source /etc/s6-overlay/init-hook-app
+fi

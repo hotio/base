@@ -1,0 +1,12 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+umask "${UMASK}"
+
+if [[ ${VPN_ENABLED} == "true" ]]; then
+    if wg-quick down "/dev/shm/${VPN_CONF}.conf" > /dev/null 2>&1; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Stopped WireGuard."
+    fi
+    rm -rf "${CONFIG_DIR}/wireguard/forwarded_port"
+    find "${CONFIG_DIR}/wireguard/" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
+fi

@@ -1,0 +1,74 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+umask "${UMASK}"
+
+mask() {
+    local n=3
+    [[ ${#1} -le 5 ]] && n=$(( ${#1} - 3 ))
+    local a="${1:0:${#1}-n}"
+    local b="${1:${#1}-n}"
+    printf "%s%s\n" "${a//?/*}" "$b"
+}
+
+#IMAGE_STATS=ewogICJhcHAiOiAicWJpdHRvcnJlbnQiLAogICJpbWFnZSI6ICJob3Rpby9xYml0dG9ycmVudDpyZWxlYXNlIiwKICAicmV2aXNpb24iOiAiMzcwYjNhNiIsCiAgInZlcnNpb24iOiAiNC42LjMiCn0K
+image=$(jq -r '.image' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
+branch=$(awk -F ':' '{print $2}' <<< "${image}")
+repo=$(awk -F ':' '{print $1}' <<< "${image}")
+revision=$(jq -r '.revision' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
+latest_revision=$(curl -fsL --max-time 10 "https://raw.githubusercontent.com/${repo}/master/tags.json" | jq -r '.'"${branch}"'.tags[2]' 2> /dev/null | awk -F '-' '{print $2}')
+revision_status=$(curl -fsL --max-time 10 "https://api.github.com/repos/${repo}/compare/${latest_revision}...${revision}" | jq -r 'if (.behind_by | length) != 0 then "(\(.status), by \(.behind_by))" else empty end')
+
+echo -ne "
+$(figlet "hotio")
+Donate:        https://hotio.dev/donate
+Documentation: https://hotio.dev$(jq -r 'if .app != "" then "/containers/\(.app)" else empty end' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
+Support:       https://hotio.dev/discord
+Image:         ${image}
+Revision:      ${revision} ${revision_status}
+Version:       $(jq -r '.version' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
+OS:            $(uname -s) $(uname -r) $(uname -m)
+
+----------------------------------------------------------------------
+ENVIRONMENT BASE
+----------------------------------------------------------------------
+PUID=${PUID}
+PGID=${PGID}
+UMASK=${UMASK}
+TZ=${TZ}
+PRIVOXY_ENABLED=${PRIVOXY_ENABLED}
+UNBOUND_ENABLED=${UNBOUND_ENABLED}
+UNBOUND_NAMESERVERS=${UNBOUND_NAMESERVERS}
+VPN_ENABLED=${VPN_ENABLED}"
+[[ ${VPN_ENABLED} == true ]] && echo -ne "
+VPN_CONF=${VPN_CONF}
+VPN_PROVIDER=${VPN_PROVIDER}
+VPN_LAN_NETWORK=${VPN_LAN_NETWORK}
+VPN_LAN_LEAK_ENABLED=${VPN_LAN_LEAK_ENABLED}
+VPN_EXPOSE_PORTS_ON_LAN=${VPN_EXPOSE_PORTS_ON_LAN}
+VPN_AUTO_PORT_FORWARD=${VPN_AUTO_PORT_FORWARD}
+VPN_AUTO_PORT_FORWARD_TO_PORTS=${VPN_AUTO_PORT_FORWARD_TO_PORTS}
+VPN_FIREWALL_TYPE=${VPN_FIREWALL_TYPE}
+VPN_HEALTHCHECK_ENABLED=${VPN_HEALTHCHECK_ENABLED}
+VPN_NAMESERVERS=${VPN_NAMESERVERS}
+VPN_PIA_USER=$(mask "${VPN_PIA_USER}")
+VPN_PIA_PASS=$(mask "${VPN_PIA_PASS}")
+VPN_PIA_PREFERRED_REGION=${VPN_PIA_PREFERRED_REGION}
+VPN_PIA_DIP_TOKEN=$([[ ${VPN_PIA_DIP_TOKEN} != "no" ]] && mask "${VPN_PIA_DIP_TOKEN}" || echo "${VPN_PIA_DIP_TOKEN}")
+VPN_PIA_PORT_FORWARD_PERSIST=${VPN_PIA_PORT_FORWARD_PERSIST}"
+echo -ne "
+----------------------------------------------------------------------
+
+"
+
+echo "Executing usermod..."
+mkdir "/tmp/temphome"
+usermod -d "/tmp/temphome" hotio
+usermod -o -u "${PUID}" hotio
+usermod -d "${CONFIG_DIR}" hotio
+rm -rf "/tmp/temphome"
+groupmod -o -g "${PGID}" hotio
+
+echo "Applying permissions to ${CONFIG_DIR}"
+chmod "=rwx" "${CONFIG_DIR}"
+find "${CONFIG_DIR}" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +

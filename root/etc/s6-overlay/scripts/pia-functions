@@ -1,0 +1,94 @@
+# shellcheck shell=bash
+
+get_token () {
+    local pia_token=""
+    local pia_token_expires_at=""
+    while [[ -z "${pia_token}" ]]; do
+        while [[ ! $(find "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json" -mtime -1 2>/dev/null) ]]; do
+            pia_token=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 --request POST 'https://www.privateinternetaccess.com/api/client/v2/token' --form "username=${VPN_PIA_USER}" --form "password=${VPN_PIA_PASS}" | jq -r '.token')
+            if [[ -n ${pia_token} ]]; then
+                jq --sort-keys \
+                    --arg token            "${pia_token}" \
+                    --arg token_expires_at "$(date +"%c" --date='1 day')" \
+                    '.token = $token | .token_expires_at = $token_expires_at' <<< "{}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json"
+            else
+                echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching a token failed!" 1>&2
+            fi
+        done
+        pia_token_expires_at=$(jq -re '.token_expires_at' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json")
+        if [[ $(date -d "${pia_token_expires_at}" +%s) -gt $(date -d "$(date)" +%s) ]]; then
+            pia_token=$(jq -r '.token' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json")
+        else
+            rm "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json"
+        fi
+    done
+    echo "${pia_token}"
+}
+
+download_pia_wg () {
+    if [[ ! $(find "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" -mtime -1 2>/dev/null) ]]; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching certificate..."
+        curl -fsL --retry 5 --retry-max-time 60 --max-time 10 'https://raw.githubusercontent.com/pia-foss/manual-connections/master/ca.rsa.4096.crt' -o "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" || exit 1
+    fi
+    if [[ "${VPN_PIA_DIP_TOKEN}" == "no" ]]; then
+        while [[ ! $(find "${CONFIG_DIR}/wireguard/pia-regions.json" -mtime -1 2>/dev/null) ]]; do
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching regions data..."
+            region_data=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -re .)
+            if [[ "$(jq -re '.groups.wg[].name' <<< "${region_data}")" == "wireguard" ]]; then
+                echo "${region_data}" > "${CONFIG_DIR}/wireguard/pia-regions.json" && \
+                    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Regions data saved in [${CONFIG_DIR}/wireguard/pia-regions.json]."
+                jq -re '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' <<< "${region_data}" | awk 'NR<3{print $0;next}{print $0| "sort"}' | rs -c\| 0 3 > "${CONFIG_DIR}/wireguard/pia-regions.txt" && \
+                    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Regions list saved in [${CONFIG_DIR}/wireguard/pia-regions.txt]."
+            fi
+        done
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Reading regions data from [${CONFIG_DIR}/wireguard/pia-regions.json]."
+        region_data=$(cat "${CONFIG_DIR}/wireguard/pia-regions.json")
+        if [[ -z "${VPN_PIA_PREFERRED_REGION}" ]]; then
+            VPN_PIA_PREFERRED_REGION=$(jq --arg PF "${VPN_AUTO_PORT_FORWARD}" -re '.regions[] | if $PF=="true" then select(.port_forward==true) else . end | .id' <<< "${region_data}" | shuf | head -1)
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Picking random region [${VPN_PIA_PREFERRED_REGION}]."
+        fi
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching server for region [${VPN_PIA_PREFERRED_REGION}]..."
+        pia_server=$(jq --arg PF "${VPN_AUTO_PORT_FORWARD}" --arg REGION "${VPN_PIA_PREFERRED_REGION}" -re '.regions[] | if $PF=="true" then select(.port_forward==true) else . end | select(.id==$REGION) | .servers.wg[0]' <<< "${region_data}")
+        pia_server_ip=$(jq -re '.ip' <<< "${pia_server}")
+        pia_server_hostname=$(jq -re '.cn' <<< "${pia_server}")
+    else
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching DIP server..."
+        dip_server_data=$(curl -fsL --request POST 'https://www.privateinternetaccess.com/api/client/v2/dedicated_ip' --header 'Content-Type: application/json' --header "Authorization: Token $(get_token)" --data-raw '{"tokens":["'"${VPN_PIA_DIP_TOKEN}"'"]}')
+        pia_server_ip=$(jq -re '.[0].ip' <<< "${dip_server_data}")
+        pia_server_hostname=$(jq -re '.[0].cn' <<< "${dip_server_data}")
+    fi
+    if [[ -z "${pia_server_hostname}" ]] || [[ "${pia_server_hostname}" == null ]] || [[ -z "${pia_server_ip}" ]] || [[ "${pia_server_ip}" == null ]]; then
+        echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Something went wrong fetching a server!"
+        exit 1
+    else
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Found server [${pia_server_hostname} - ${pia_server_ip}]."
+        wg_private_key=$(wg genkey)
+        wg_public_key=$(wg pubkey <<< "${wg_private_key}")
+        if [[ "${VPN_PIA_DIP_TOKEN}" == "no" ]]; then
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching WireGuard config..."
+            wg_json_response=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 -G --connect-to "${pia_server_hostname}::${pia_server_ip}:" --cacert "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" --data-urlencode "pt=$(get_token)" --data-urlencode "pubkey=${wg_public_key}" "https://${pia_server_hostname}:1337/addKey")
+        else
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching WireGuard config using DIP token..."
+            wg_json_response=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 -G --connect-to "${pia_server_hostname}::${pia_server_ip}:" --cacert "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" --user "dedicated_ip_${VPN_PIA_DIP_TOKEN}:${pia_server_ip}" --data-urlencode "pubkey=${wg_public_key}" "https://${pia_server_hostname}:1337/addKey")
+        fi
+        if [[ $(jq -re '.status' <<< "${wg_json_response}") != "OK" ]]; then
+            echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Something went wrong fetching WireGuard config!"
+            exit 1
+        fi
+        {
+        echo "# hostname: ${pia_server_hostname}"
+        echo "# ip: ${pia_server_ip}"
+        echo "[Interface]"
+        echo "Address = $(jq -re '.peer_ip' <<< "${wg_json_response}")"
+        echo "PrivateKey = ${wg_private_key}"
+        echo "DNS = $(jq -re '.dns_servers | join(",")' <<< "${wg_json_response}")"
+        echo "[Peer]"
+        echo "PersistentKeepalive = 25"
+        echo "PublicKey = $(jq -re '.server_key' <<< "${wg_json_response}")"
+        echo "AllowedIPs = 0.0.0.0/0"
+        echo "Endpoint = ${pia_server_ip}:$(jq -re '.server_port' <<< "${wg_json_response}")"
+        } > "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
+        find "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] WireGuard config written to [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf]."
+    fi
+}

@@ -1,0 +1,13 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+# shellcheck source=/dev/null
+source /etc/s6-overlay/scripts/general-functions
+
+umask "${UMASK}"
+
+setup_nameservers
+
+echo "nameserver 127.0.0.1" > "/etc/resolv.conf"
+
+/usr/sbin/unbound -c "/dev/shm/unbound.conf" -d -p
