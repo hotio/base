@@ -14,13 +14,13 @@
   "alpinevpn-noquick": {
     "description": "Alpine 3.22",
     "hide": false,
-    "last_updated": "2025-12-08T08:38:21.000Z",
-    "last_updated_url": "https://github.com/hotio/base/actions/runs/20021643288",
+    "last_updated": "2025-12-09T07:17:43.000Z",
+    "last_updated_url": "https://github.com/hotio/base/actions/runs/20055167432",
     "latest": false,
     "tags": [
       "alpinevpn-noquick",
       "alpinevpn-noquick-3.2.1.0",
-      "alpinevpn-noquick-ecbe0a1"
+      "alpinevpn-noquick-d96000f"
     ]
   },
   "noblevpn": {
