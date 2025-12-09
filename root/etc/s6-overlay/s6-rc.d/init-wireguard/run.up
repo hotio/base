@@ -21,16 +21,6 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         exit 1
     fi
 
-    unset rp_filter_strict
-    for file in /proc/sys/net/ipv4/conf/*; do
-        [[ "$(cat "/proc/sys/net/ipv4/conf/${file##*/}/rp_filter")" != "0" ]] && rp_filter_strict="true"
-    done
-    if [[ "${rp_filter_strict}" == "true" ]] && [[ "$(cat /proc/sys/net/ipv4/conf/all/src_valid_mark)" != "1" ]]; then
-        echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--sysctl=\"net.ipv4.conf.all.src_valid_mark=1\"] is not set and [rp_filter] is set to [strict]. Exiting..."
-        echo "Add: --sysctl=\"net.ipv4.conf.all.src_valid_mark=1\""
-        exit 1
-    fi
-
     unset ipv6_wanted
     for file in /proc/sys/net/ipv6/conf/*; do
         [[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && ipv6_wanted="true"
@@ -39,11 +29,17 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv6 support is available."
     fi
 
-    [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-pre.sh" ]] && bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-pre.sh"
-
     if [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
         mkdir "${CONFIG_DIR}/wireguard"
         find "${CONFIG_DIR}/wireguard" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Created directory [${CONFIG_DIR}/wireguard]."
+    fi
+
+    if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-pre.sh" ]]; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-pre.sh] found. Executing..."
+        bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-pre.sh"
+    else
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-pre.sh] not found."
     fi
 
     if [[ ${VPN_PROVIDER} == "pia" ]]; then
@@ -56,8 +52,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     else
         dos2unix -q -n "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" "/dev/shm/${VPN_CONF}.conf"
         chmod 600 "/dev/shm/${VPN_CONF}.conf"
-        sed -i 's:DNS:#DNS:g' "/dev/shm/${VPN_CONF}.conf"
-        sed -i 's:Address:#Address:g' "/dev/shm/${VPN_CONF}.conf"
+        wg-quick strip "/dev/shm/${VPN_CONF}.conf" > "/dev/shm/${VPN_CONF}-stripped.conf"
     fi
 
     set -e
@@ -65,16 +60,16 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Setting nameserver to [1.1.1.1] until Unbound starts."
     echo "nameserver 1.1.1.1" > "/etc/resolv.conf"
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Creating WireGuard interface..."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Creating WireGuard interface [${VPN_CONF}]."
     ip link add dev "${VPN_CONF}" type wireguard
     ip_addresses=$(grep 'Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
     for ip_address in ${ip_addresses//,/ }; do
         ipcalc -4 -c "${ip_address}" > /dev/null 2>&1 && ip -4 address add dev "${VPN_CONF}" "${ip_address}"
         ipcalc -6 -c "${ip_address}" > /dev/null 2>&1 && [[ ${ipv6_wanted} == "true" ]] && ip -6 address add dev "${VPN_CONF}" "${ip_address}"
     done
-    wg setconf "${VPN_CONF}" "/dev/shm/${VPN_CONF}.conf"
+    wg setconf "${VPN_CONF}" "/dev/shm/${VPN_CONF}-stripped.conf"
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Starting WireGuard interface..."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Starting WireGuard interface [${VPN_CONF}]."
     ip link set up dev "${VPN_CONF}"
 
     nw_default=$(ip -o -4 route show to default)
@@ -206,7 +201,12 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     set +e
 
-    [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh" ]] && bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh"
+    if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh" ]]; then
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh] found. Executing..."
+        bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh"
+    else
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh] not found."
+    fi
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Performing internet connectivity tests..."
 
