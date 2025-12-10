@@ -64,8 +64,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     ip link add dev "${VPN_CONF}" type wireguard
     ip_addresses=$(grep 'Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
     for ip_address in ${ip_addresses//,/ }; do
-        ipcalc -4 -c "${ip_address}" > /dev/null 2>&1 && ip -4 address add dev "${VPN_CONF}" "${ip_address}"
-        ipcalc -6 -c "${ip_address}" > /dev/null 2>&1 && [[ ${ipv6_wanted} == "true" ]] && ip -6 address add dev "${VPN_CONF}" "${ip_address}"
+        ipcalc -4 -c "${ip_address}" > /dev/null 2>&1 && ip -4 address add dev "${VPN_CONF}" "${ip_address}" && echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv4 address [${ip_address}] to WireGuard interface [${VPN_CONF}]."
+        ipcalc -6 -c "${ip_address}" > /dev/null 2>&1 && [[ ${ipv6_wanted} == "true" ]] && ip -6 address add dev "${VPN_CONF}" "${ip_address}" && echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv6 address [${ip_address}] to WireGuard interface [${VPN_CONF}]."
     done
     wg setconf "${VPN_CONF}" "/dev/shm/${VPN_CONF}-stripped.conf"
 
@@ -73,7 +73,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     ip link set up dev "${VPN_CONF}"
 
     vpn_allowedips=$(wg show | grep 'allowed ips:' | awk -F ': ' '{print $2}')
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard [${VPN_CONF}] allowed ips [${vpn_allowedips// /}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard interface [${VPN_CONF}] allowed ips are [${vpn_allowedips// /}]."
 
     nw_default=$(ip -o -4 route show to default)
     nw_interface=$(awk '{print $5}' <<< "${nw_default}")
