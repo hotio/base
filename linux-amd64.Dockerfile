@@ -23,7 +23,7 @@ ENV IMAGE_STATS=${IMAGE_STATS} BUILD_ARCHITECTURE=${BUILD_ARCHITECTURE} \
     PUID="1000" PGID="1000" UMASK="002" TZ="Etc/UTC" \
     LANG="en_US.UTF-8" LANGUAGE="en_US:en" LC_ALL="en_US.UTF-8" \
     S6_BEHAVIOUR_IF_STAGE2_FAILS=2 S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 S6_SERVICES_GRACETIME=180000 S6_STAGE2_HOOK="/etc/s6-overlay/init-hook" \
-    VPN_ENABLED="false" VPN_CONF="wg0" VPN_PROVIDER="generic" VPN_LAN_NETWORK="" VPN_LAN_LEAK_ENABLED="false" VPN_EXPOSE_PORTS_ON_LAN="" VPN_AUTO_PORT_FORWARD="true" VPN_AUTO_PORT_FORWARD_TO_PORTS="" VPN_FIREWALL_TYPE="auto" VPN_HEALTHCHECK_ENABLED="false" VPN_NAMESERVERS="" PRIVOXY_ENABLED="false" UNBOUND_ENABLED="false" UNBOUND_NAMESERVERS="" \
+    VPN_ENABLED="false" VPN_CONF="wg0" VPN_PROVIDER="generic" VPN_LAN_NETWORK="" VPN_LAN_LEAK_ENABLED="false" VPN_EXPOSE_PORTS_ON_LAN="" VPN_AUTO_PORT_FORWARD="true" VPN_AUTO_PORT_FORWARD_TO_PORTS="" VPN_HEALTHCHECK_ENABLED="false" VPN_NAMESERVERS="" PRIVOXY_ENABLED="false" UNBOUND_ENABLED="false" UNBOUND_NAMESERVERS="" \
     VPN_PIA_USER="" VPN_PIA_PASS="" VPN_PIA_PREFERRED_REGION="" VPN_PIA_DIP_TOKEN="no" VPN_PIA_PORT_FORWARD_PERSIST="false"
 
 VOLUME ["${CONFIG_DIR}"]
@@ -34,10 +34,8 @@ ARG DEBIAN_FRONTEND="noninteractive"
 # install packages
 RUN apt update && \
     apt install -y --no-install-recommends --no-install-suggests \
-        ca-certificates curl dos2unix figlet ipcalc-ng iproute2 iptables iputils-ping jq libcap2-bin locales natpmpc nftables p7zip-full privoxy python3 rs tzdata unbound unzip wget wireguard-go wireguard-tools xz-utils && \
+        ca-certificates curl dos2unix figlet ipcalc-ng iproute2 iputils-ping jq libcap2-bin locales natpmpc nftables p7zip-full privoxy python3 rs tzdata unbound unzip wget wireguard-tools xz-utils && \
     ln -s ipcalc-ng /usr/bin/ipcalc && \
-    update-alternatives --set iptables /usr/sbin/iptables-legacy && \
-    update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy && \
 # generate locale
     locale-gen en_US.UTF-8 && \
 # clean up
