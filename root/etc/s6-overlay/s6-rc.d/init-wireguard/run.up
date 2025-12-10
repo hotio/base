@@ -64,8 +64,16 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     ip link add dev "${VPN_CONF}" type wireguard
     ip_addresses=$(grep 'Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
     for ip_address in ${ip_addresses//,/ }; do
-        ipcalc -4 -c "${ip_address}" > /dev/null 2>&1 && ip -4 address add dev "${VPN_CONF}" "${ip_address}" && echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv4 address [${ip_address}] to WireGuard interface [${VPN_CONF}]."
-        ipcalc -6 -c "${ip_address}" > /dev/null 2>&1 && [[ ${ipv6_wanted} == "true" ]] && ip -6 address add dev "${VPN_CONF}" "${ip_address}" && echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv6 address [${ip_address}] to WireGuard interface [${VPN_CONF}]."
+        if ipcalc -4 -s -c "${ip_address}"; then
+            ip_address=$(ipcalc -4 -s -a "${ip_address}" | awk -F '=' '{print $2}')
+            ip -4 address add dev "${VPN_CONF}" "${ip_address}"
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv4 address [${ip_address}] to WireGuard interface [${VPN_CONF}]."
+        fi
+        if ipcalc -6 -s -c "${ip_address}" && [[ ${ipv6_wanted} == "true" ]]; then
+            ip_address=$(ipcalc -6 -s -a "${ip_address}" | awk -F '=' '{print $2}')
+            ip -6 address add dev "${VPN_CONF}" "${ip_address}"
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv6 address [${ip_address}] to WireGuard interface [${VPN_CONF}]."
+        fi
     done
     wg setconf "${VPN_CONF}" "/dev/shm/${VPN_CONF}-stripped.conf"
 
@@ -89,7 +97,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     vpn_endpoint=$(wg show | grep endpoint: | awk '{print $2}')
     vpn_endpoint_ip="${vpn_endpoint%:*}"
     vpn_endpoint_port="${vpn_endpoint##*:}"
-    if ipcalc -4 -c "${vpn_endpoint_ip}" > /dev/null 2>&1; then
+    if ipcalc -4 -s -c "${vpn_endpoint_ip}"; then
         ip -4 route add "${vpn_endpoint_ip}" via "${nw_gateway}" dev "${nw_interface}"
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added [${vpn_endpoint_ip}][ENDPOINT] as route via interface [${nw_interface}]."
     else
@@ -99,7 +107,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
     for lan_network in "${lan_networks[@]}"; do
-        if ipcalc -4 -c "${lan_network}" > /dev/null 2>&1; then
+        if ipcalc -4 -s -c "${lan_network}"; then
             ip -4 route add "${lan_network}" via "${nw_gateway}" dev "${nw_interface}"
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added [${lan_network}][LAN] as route via interface [${nw_interface}]."
         else
@@ -172,7 +180,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     nft add rule inet hotio input iifname "lo" counter accept
     nft add rule inet hotio input icmp type echo-reply counter accept
     nft add rule inet hotio input icmpv6 type echo-reply counter accept
-    ipcalc -4 -c "${vpn_endpoint_ip}" > /dev/null 2>&1 && nft add rule inet hotio input iifname "${nw_interface}" ip daddr "${default_ip}" ip saddr "${vpn_endpoint_ip}" udp sport "${vpn_endpoint_port}" counter accept
+    ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${nw_interface}" ip daddr "${default_ip}" ip saddr "${vpn_endpoint_ip}" udp sport "${vpn_endpoint_port}" counter accept
 
     # Create output rules
     IFS=',' read -ra additional_ports <<< "${open_ports%,}"
@@ -197,7 +205,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     nft add rule inet hotio output oifname "lo" counter accept
     nft add rule inet hotio output icmp type echo-request counter accept
     nft add rule inet hotio output icmpv6 type echo-request counter accept
-    ipcalc -4 -c "${vpn_endpoint_ip}" > /dev/null 2>&1 && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" udp dport "${vpn_endpoint_port}" counter accept
+    ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" udp dport "${vpn_endpoint_port}" counter accept
 
     # List rules
     nft -s list table inet hotio
