@@ -3,7 +3,7 @@
   "upstream_digest_amd64": "sha256:a107a3c031732299dd9dd607bb13787834db2de38cfa13f1993b7105e4814c60",
   "upstream_digest_arm64": "sha256:ed4a87b21407bf05ebacdb971243c59903b5b12e06c8e373de2b1b1955f5dd9e",
   "upstream_image": "alpine",
-  "upstream_tag": "3.23",
+  "upstream_tag": "3.22",
   "version": "3.2.1.0",
   "version_s6": "3.2.1.0"
 }
