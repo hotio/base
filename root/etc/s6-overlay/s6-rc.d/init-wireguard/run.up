@@ -62,7 +62,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Creating WireGuard interface [${VPN_CONF}]."
     ip link add dev "${VPN_CONF}" type wireguard
-    ip_addresses=$(grep 'Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
+    ip_addresses=$(grep '^Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
     for ip_address in ${ip_addresses//,/ }; do
         if ipcalc -4 -s -c "${ip_address}"; then
             ip_address=$(ipcalc -4 -s -a "${ip_address}" | awk -F '=' '{print $2}')
