@@ -21,14 +21,6 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         exit 1
     fi
 
-    unset ipv6_wanted
-    for file in /proc/sys/net/ipv6/conf/*; do
-        [[ "$(cat "/proc/sys/net/ipv6/conf/${file##*/}/disable_ipv6")" == "0" ]] && ipv6_wanted="true"
-    done
-    if [[ ${ipv6_wanted} == "true" ]]; then
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv6 support is available. Disable with [--sysctl=\"net.ipv6.conf.all.disable_ipv6=1\"] if you have no need for IPv6."
-    fi
-
     if [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
         mkdir "${CONFIG_DIR}/wireguard"
         find "${CONFIG_DIR}/wireguard" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
@@ -62,6 +54,12 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Creating WireGuard interface [${VPN_CONF}]."
     ip link add dev "${VPN_CONF}" type wireguard
+    if [[ "$(cat "/proc/sys/net/ipv6/conf/${VPN_CONF}/disable_ipv6")" == "0" ]]; then
+        ipv6_available="true"
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv6 is available on WireGuard interface [${VPN_CONF}]. Disable with [--sysctl=\"net.ipv6.conf.all.disable_ipv6=1\"] if you have no need for IPv6."
+    else
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv6 is not available on WireGuard interface [${VPN_CONF}]. Enable with [--sysctl=\"net.ipv6.conf.all.disable_ipv6=0\"] if you have a need for IPv6."
+    fi
     ip_addresses=$(grep '^Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
     for ip_address in ${ip_addresses//,/ }; do
         if ipcalc -4 -s -c "${ip_address}"; then
@@ -69,7 +67,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             ip -4 address add dev "${VPN_CONF}" "${ip_address}"
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv4 address [${ip_address}] to WireGuard interface [${VPN_CONF}]."
         fi
-        if ipcalc -6 -s -c "${ip_address}" && [[ ${ipv6_wanted} == "true" ]]; then
+        if ipcalc -6 -s -c "${ip_address}" && [[ ${ipv6_available} == "true" ]]; then
             ip_address=$(ipcalc -6 -s -a "${ip_address}" | awk -F '=' '{print $2}')
             ip -6 address add dev "${VPN_CONF}" "${ip_address}"
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv6 address [${ip_address}] to WireGuard interface [${VPN_CONF}]."
@@ -118,7 +116,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     ip -4 route del default > /dev/null 2>&1
     ip -4 route add default dev "${VPN_CONF}"
-    if [[ ${ipv6_wanted} == "true" ]]; then
+    if [[ ${ipv6_available} == "true" ]]; then
         ip -6 route del default > /dev/null 2>&1 || true
         ip -6 route add default dev "${VPN_CONF}"
     fi
@@ -126,7 +124,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv4 routes overview:"
     ip -4 route
-    if [[ ${ipv6_wanted} == "true" ]]; then
+    if [[ ${ipv6_available} == "true" ]]; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv6 routes overview:"
         ip -6 route
     fi
@@ -237,7 +235,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [IPV4] ${ip4}"
     fi
 
-    if [[ ${ipv6_wanted} == "true" ]]; then
+    if [[ ${ipv6_available} == "true" ]]; then
         ping6=$(ping6 -c 5 2606:4700:4700::1111 2> /dev/null | tail -1 | awk -F ' = ' '{print $2}')
         if [[ -z ${ping6} ]]; then
             echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [IPV6] Ping test failed!"
