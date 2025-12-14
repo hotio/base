@@ -3,12 +3,18 @@
 
 umask "${UMASK}"
 
-vpn_gw=$(grep Address "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
-vpn_gw="${vpn_gw%.*}.1"
+ip_addresses=$(grep '^Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
+for ip_address in ${ip_addresses//,/ }; do
+    if ipcalc -4 -s -c "${ip_address}"; then
+        ip_address=$(ipcalc -4 -s -a "${ip_address}" | awk -F '=' '{print $2}')
+        vpn_gw="${ip_address%.*}.1"
+        break
+    fi
+done
 
 while true; do
     if ! natpmpc -g "${vpn_gw}" &> /dev/null; then
-        echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Endpoint [${vpn_gw%.*}.1] does not support port forwarding!"
+        echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PROTON] Endpoint [${vpn_gw}] does not support port forwarding!"
     else
         port=$(natpmpc -g "${vpn_gw}" -a 1 0 udp 60 | grep -P -o -m 1 '(?<=Mapped public port\s)\d+')
         if [[ -n "${port}" ]]; then
