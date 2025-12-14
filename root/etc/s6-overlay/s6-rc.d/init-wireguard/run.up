@@ -8,6 +8,11 @@ source /etc/s6-overlay/scripts/general-functions
 umask "${UMASK}"
 
 if [[ ${VPN_ENABLED} == "true" ]]; then
+    if [[ -n ${VPN_AUTO_PORT_FORWARD_TO_PORTS} ]]; then
+        VPN_PORT_REDIRECTS=${VPN_AUTO_PORT_FORWARD_TO_PORTS}
+        echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] The variable [VPN_AUTO_PORT_FORWARD_TO_PORTS] is deprecated in favor of [VPN_PORT_REDIRECTS], please adjust your config!"
+    fi
+
     if ! capsh --print | grep -q "Current:.*cap_net_admin"; then
         echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] [--cap-add=NET_ADMIN] is not set or running with [--privileged=true]. Exiting..."
         echo "Add: --cap-add=NET_ADMIN"
@@ -52,34 +57,34 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Setting nameserver to [1.1.1.1] until Unbound starts."
     echo "nameserver 1.1.1.1" > "/etc/resolv.conf"
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Creating WireGuard interface [${VPN_CONF}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Creating interface [${VPN_CONF}]."
     ip link add dev "${VPN_CONF}" type wireguard
     if [[ "$(cat "/proc/sys/net/ipv6/conf/${VPN_CONF}/disable_ipv6")" == "0" ]]; then
         ipv6_available="true"
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv6 is available on WireGuard interface [${VPN_CONF}]. Disable with [--sysctl=\"net.ipv6.conf.all.disable_ipv6=1\"] if you have no need for IPv6."
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv6 is available on interface [${VPN_CONF}]. Disable with [--sysctl=\"net.ipv6.conf.all.disable_ipv6=1\"] if you have no need for IPv6."
     else
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv6 is not available on WireGuard interface [${VPN_CONF}]. Enable with [--sysctl=\"net.ipv6.conf.all.disable_ipv6=0\"] if you have a need for IPv6."
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv6 is not available on interface [${VPN_CONF}]. Enable with [--sysctl=\"net.ipv6.conf.all.disable_ipv6=0\"] if you have a need for IPv6."
     fi
     ip_addresses=$(grep '^Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
     for ip_address in ${ip_addresses//,/ }; do
         if ipcalc -4 -s -c "${ip_address}"; then
             ip_address=$(ipcalc -4 -s -a "${ip_address}" | awk -F '=' '{print $2}')
             ip -4 address add dev "${VPN_CONF}" "${ip_address}"
-            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv4 address [${ip_address}] to WireGuard interface [${VPN_CONF}]."
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv4 address [${ip_address}] to interface [${VPN_CONF}]."
         fi
         if ipcalc -6 -s -c "${ip_address}" && [[ ${ipv6_available} == "true" ]]; then
             ip_address=$(ipcalc -6 -s -a "${ip_address}" | awk -F '=' '{print $2}')
             ip -6 address add dev "${VPN_CONF}" "${ip_address}"
-            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv6 address [${ip_address}] to WireGuard interface [${VPN_CONF}]."
+            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv6 address [${ip_address}] to interface [${VPN_CONF}]."
         fi
     done
     wg setconf "${VPN_CONF}" "/dev/shm/${VPN_CONF}-stripped.conf"
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Starting WireGuard interface [${VPN_CONF}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Starting interface [${VPN_CONF}]."
     ip link set up dev "${VPN_CONF}"
 
     vpn_allowedips=$(wg show | grep 'allowed ips:' | awk -F ': ' '{print $2}')
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] WireGuard interface [${VPN_CONF}] allowed ips are [${vpn_allowedips// /}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Allowed ips on interface [${VPN_CONF}] are [${vpn_allowedips// /}]."
 
     nw_default=$(ip -o -4 route show to default)
     nw_interface=$(awk '{print $5}' <<< "${nw_default}")
@@ -139,13 +144,13 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     done
     IFS=',' read -ra ports <<< "${open_ports%,}"
     for port in "${ports[@]}"; do
-        grep -q "${port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
+        grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" && continue
         closed_ports+="${port},"
     done
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports opened on [${nw_interface}] are [${open_ports%,}]."
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports closed on [${VPN_CONF}] are [${closed_ports%,}]."
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports redirected on [${VPN_CONF}] are [${VPN_AUTO_PORT_FORWARD_TO_PORTS%,}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports opened on interface [${nw_interface}] are [${open_ports%,}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports closed on interface [${VPN_CONF}] are [${closed_ports%,}]."
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports redirected on interface [${VPN_CONF}] are [${VPN_PORT_REDIRECTS%,}]."
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added firewall rules:"
     # Create chains
@@ -159,7 +164,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     IFS=',' read -ra additional_ports <<< "${open_ports%,}"
     for additional_port in "${additional_ports[@]}"; do
         nft add rule inet hotio input iifname "${nw_interface}" "${additional_port##*/}" dport "${additional_port%/*}" ip daddr "${default_ip}" counter accept
-        grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
+        grep -q "${additional_port}" <<< "${VPN_PORT_REDIRECTS}" && continue
         nft add rule inet hotio input iifname "${VPN_CONF}" "${additional_port##*/}" dport "${additional_port%/*}" counter drop
     done
     while IFS= read -r network; do
@@ -184,7 +189,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     IFS=',' read -ra additional_ports <<< "${open_ports%,}"
     for additional_port in "${additional_ports[@]}"; do
         nft add rule inet hotio output oifname "${nw_interface}" "${additional_port##*/}" sport "${additional_port%/*}" ip saddr "${default_ip}" counter accept
-        grep -q "${additional_port}" <<< "${VPN_AUTO_PORT_FORWARD_TO_PORTS}" && continue
+        grep -q "${additional_port}" <<< "${VPN_PORT_REDIRECTS}" && continue
         nft add rule inet hotio output oifname "${VPN_CONF}" "${additional_port##*/}" sport "${additional_port%/*}" counter drop
     done
     while IFS= read -r network; do
