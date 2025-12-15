@@ -144,6 +144,14 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     fi
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added firewall rules:"
+    IFS=',' read -ra ports <<< "${WEBUI_PORTS%,}"
+    for port in "${ports[@]}"; do
+        exposed_ports+="${port},"
+    done
+    IFS=',' read -ra ports <<< "${VPN_EXPOSE_PORTS_ON_LAN%,}"
+    for port in "${ports[@]}"; do
+        exposed_ports+="${port},"
+    done
     # Create chains
     nft add table inet hotio
     nft add chain inet hotio forward    '{ type filter hook forward    priority 0 ; policy drop; }'
@@ -159,7 +167,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio input iifname "${default_interface}" ip saddr "${lan_network}" ip daddr "${default_address}" counter accept
         done
     fi
-    IFS=',' read -ra ports <<< "${WEBUI_PORTS%,},${VPN_EXPOSE_PORTS_ON_LAN%,}"
+    IFS=',' read -ra ports <<< "${exposed_ports%,}"
     for port in "${ports[@]}"; do
         if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
@@ -188,7 +196,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio output oifname "${default_interface}" ip saddr "${default_address}" ip daddr "${lan_network}" counter accept
         done
     fi
-    IFS=',' read -ra ports <<< "${WEBUI_PORTS%,},${VPN_EXPOSE_PORTS_ON_LAN%,}"
+    IFS=',' read -ra ports <<< "${exposed_ports%,}"
     for port in "${ports[@]}"; do
         if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
