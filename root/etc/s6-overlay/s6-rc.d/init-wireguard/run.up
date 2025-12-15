@@ -146,10 +146,12 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added firewall rules:"
     IFS=',' read -ra ports <<< "${WEBUI_PORTS%,}"
     for port in "${ports[@]}"; do
+        port=$(xargs <<< "${port}")
         exposed_ports+="${port},"
     done
     IFS=',' read -ra ports <<< "${VPN_EXPOSE_PORTS_ON_LAN%,}"
     for port in "${ports[@]}"; do
+        port=$(xargs <<< "${port}")
         exposed_ports+="${port},"
     done
     # Create chains
