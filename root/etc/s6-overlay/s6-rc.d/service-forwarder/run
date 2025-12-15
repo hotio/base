@@ -10,7 +10,7 @@ fi
 
 IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
 for forward_port in "${forward_ports[@]}"; do
-    forward_port=$(xargs <<< "${forward_port}")
+    forward_port="${forward_port// /}"
     [[ ! ${forward_port} =~ "@" ]] && continue
     internal="${forward_port##*@}"
     new_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${forward_port%@*} redirect to :${internal##*/} " <<< "$(nft --handle list chain inet hotio prerouting)" | sed 's/.* # handle //g')
@@ -35,7 +35,7 @@ while true; do
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Forwarded port is [${port}]."
             IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
             for forward_port in "${forward_ports[@]}"; do
-                forward_port=$(xargs <<< "${forward_port}")
+                forward_port="${forward_port// /}"
                 [[ ${forward_port} =~ "@" ]] && continue
                 internal="${forward_port##*@}"
                 old_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${old_port} redirect to :${internal##*/} " <<< "$(nft --handle list chain inet hotio prerouting)" | sed 's/.* # handle //g')
