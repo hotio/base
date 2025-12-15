@@ -13,10 +13,10 @@ for forward_port in "${forward_ports[@]}"; do
     [[ ! ${forward_port} =~ "@" ]] && continue
     internal="${forward_port##*@}"
     new_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${forward_port%@*} redirect to :${internal##*/} " <<< "$(nft --handle list chain inet hotio prerouting)" | sed 's/.* # handle //g')
-    if [[ -z "${new_rule}" ]]; then
+    if [[ -z "${new_rule}" ]] && [[ "${forward_port%@*}" != "${internal%/*}" ]]; then
         nft add rule inet hotio prerouting iifname "${VPN_CONF}" "${internal##*/}" dport "${forward_port%@*}" redirect to :"${internal%/*}"
+        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected port [${forward_port%@*}/${internal##*/}] to [${internal%/*}/${internal##*/}] on interface [${VPN_CONF}]."
     fi
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected port [${forward_port%@*}/${internal##*/}] to [${internal%/*}/${internal##*/}] on interface [${VPN_CONF}]."
 done
 
 re='^[0-9]+$'
@@ -43,8 +43,8 @@ while true; do
                 new_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${port} redirect to :${internal##*/} " <<< "$(nft --handle list chain inet hotio prerouting)" | sed 's/.* # handle //g')
                 if [[ -z "${new_rule}" ]]; then
                     nft add rule inet hotio prerouting iifname "${VPN_CONF}" "${internal##*/}" dport "${port}" redirect to :"${internal%/*}"
+                    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected port [${port}/${internal##*/}] to [${internal%/*}/${internal##*/}] on interface [${VPN_CONF}]."
                 fi
-                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Redirected port [${port}/${internal##*/}] to [${internal%/*}/${internal##*/}] on interface [${VPN_CONF}]."
             done
             # shellcheck source=/dev/null
             source "${APP_DIR}/forwarded_port_update_app"

@@ -86,11 +86,15 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     vpn_allowedips=$(wg show | grep 'allowed ips:' | awk -F ': ' '{print $2}')
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Allowed ips on interface [${VPN_CONF}] are [${vpn_allowedips// /}]."
 
-    nw_default=$(ip -o -4 route show to default)
+    nw_default=$(ip -4 -o route show to default)
     nw_interface=$(awk '{print $5}' <<< "${nw_default}")
     nw_gateway=$(awk '{print $3}' <<< "${nw_default}")
 
-    networks="$(ip -o -4 route show proto kernel | grep -v "${VPN_CONF}")"
+    networks=$(ip -4 -o route show proto kernel || true)
+    if [[ -z "${networks}" ]]; then
+        echo "[ERR] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Could not find networks with command [ip -4 -o route show proto kernel]! Exiting..."
+        exit 1
+    fi
     while IFS= read -r network; do
         default_note="         "
         [[ "$(awk '{print $3}' <<< "${network}")" == "${nw_interface}" ]] && default_ip=$(awk '{print $7}' <<< "${network}") && default_note="[default]"
@@ -128,29 +132,11 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Changed [default] route via interface [${VPN_CONF}]."
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv4 routes overview:"
-    ip -4 route
+    ip -4 -o route show
     if [[ ${ipv6_available} == "true" ]]; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] IPv6 routes overview:"
-        ip -6 route
+        ip -6 -o route show
     fi
-
-    IFS=',' read -ra ports <<< "${WEBUI_PORTS%,}"
-    for port in "${ports[@]}"; do
-        open_ports+="${port},"
-    done
-    IFS=',' read -ra ports <<< "${VPN_EXPOSE_PORTS_ON_LAN%,}"
-    for port in "${ports[@]}"; do
-        open_ports+="${port},"
-    done
-    IFS=',' read -ra ports <<< "${open_ports%,}"
-    for port in "${ports[@]}"; do
-        grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" && continue
-        closed_ports+="${port},"
-    done
-
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports opened on interface [${nw_interface}] are [${open_ports%,}]."
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports closed on interface [${VPN_CONF}] are [${closed_ports%,}]."
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Ports redirected on interface [${VPN_CONF}] are [${VPN_PORT_REDIRECTS%,}]."
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added firewall rules:"
     # Create chains
@@ -167,28 +153,25 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio input iifname "${nw_interface}" ip saddr "${lan_network}" ip daddr "${default_ip}" counter accept
         done
     fi
-    IFS=',' read -ra additional_ports <<< "${open_ports%,}"
-    for additional_port in "${additional_ports[@]}"; do
+    IFS=',' read -ra ports <<< "${WEBUI_PORTS%,},${VPN_EXPOSE_PORTS_ON_LAN%,}"
+    for port in "${ports[@]}"; do
         if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
-                ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio input iifname "${nw_interface}" "${additional_port##*/}" dport "${additional_port%/*}" ip saddr "${lan_network}" ip daddr "${default_ip}" counter accept
+                ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio input iifname "${nw_interface}" "${port##*/}" dport "${port%/*}" ip saddr "${lan_network}" ip daddr "${default_ip}" counter accept
             done
         fi
-        grep -q "${additional_port}" <<< "${VPN_PORT_REDIRECTS}" && continue
-        nft add rule inet hotio input iifname "${VPN_CONF}" "${additional_port##*/}" dport "${additional_port%/*}" counter drop
+        grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" && continue
+        nft add rule inet hotio input iifname "${VPN_CONF}" "${port##*/}" dport "${port%/*}" counter drop
     done
     while IFS= read -r network; do
-        nw_if=$(awk '{print $3}' <<< "${network}")
-        nw_cidr=$(awk '{print $1}' <<< "${network}")
-        nw_ip=$(awk '{print $7}' <<< "${network}")
-        nft add rule inet hotio input iifname "${nw_if}" ip saddr "${nw_cidr}" ip daddr "${nw_ip}" counter accept
+        nft add rule inet hotio input iifname "$(awk '{print $3}' <<< "${network}")" ip saddr "$(awk '{print $1}' <<< "${network}")" ip daddr "$(awk '{print $7}' <<< "${network}")" counter accept
     done <<< "${networks}"
+    ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${nw_interface}" udp sport "${vpn_endpoint_port}" ip saddr "${vpn_endpoint_ip}" ip daddr "${default_ip}" counter accept
     nft add rule inet hotio input iifname "${VPN_CONF}" counter accept
     nft add rule inet hotio input iifname "lo" counter accept
     nft add rule inet hotio input icmp type echo-reply counter accept
     nft add rule inet hotio input icmpv6 type echo-reply counter accept
-    ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${nw_interface}" udp sport "${vpn_endpoint_port}" ip saddr "${vpn_endpoint_ip}" ip daddr "${default_ip}" counter accept
 
     # Create output rules
     if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
@@ -197,28 +180,25 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
             ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${lan_network}" counter accept
         done
     fi
-    IFS=',' read -ra additional_ports <<< "${open_ports%,}"
-    for additional_port in "${additional_ports[@]}"; do
+    IFS=',' read -ra ports <<< "${WEBUI_PORTS%,},${VPN_EXPOSE_PORTS_ON_LAN%,}"
+    for port in "${ports[@]}"; do
         if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
-                ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio output oifname "${nw_interface}" "${additional_port##*/}" sport "${additional_port%/*}" ip saddr "${default_ip}" ip daddr "${lan_network}" counter accept
+                ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio output oifname "${nw_interface}" "${port##*/}" sport "${port%/*}" ip saddr "${default_ip}" ip daddr "${lan_network}" counter accept
             done
         fi
-        grep -q "${additional_port}" <<< "${VPN_PORT_REDIRECTS}" && continue
-        nft add rule inet hotio output oifname "${VPN_CONF}" "${additional_port##*/}" sport "${additional_port%/*}" counter drop
+        grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" && continue
+        nft add rule inet hotio output oifname "${VPN_CONF}" "${port##*/}" sport "${port%/*}" counter drop
     done
     while IFS= read -r network; do
-        nw_if=$(awk '{print $3}' <<< "${network}")
-        nw_cidr=$(awk '{print $1}' <<< "${network}")
-        nw_ip=$(awk '{print $7}' <<< "${network}")
-        nft add rule inet hotio output oifname "${nw_if}" ip saddr "${nw_ip}" ip daddr "${nw_cidr}" counter accept
+        nft add rule inet hotio output oifname "$(awk '{print $3}' <<< "${network}")" ip saddr "$(awk '{print $7}' <<< "${network}")" ip daddr "$(awk '{print $1}' <<< "${network}")" counter accept
     done <<< "${networks}"
+    ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" udp dport "${vpn_endpoint_port}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" counter accept
     nft add rule inet hotio output oifname "${VPN_CONF}" counter accept
     nft add rule inet hotio output oifname "lo" counter accept
     nft add rule inet hotio output icmp type echo-request counter accept
     nft add rule inet hotio output icmpv6 type echo-request counter accept
-    ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" udp dport "${vpn_endpoint_port}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" counter accept
 
     # List rules
     nft -s list table inet hotio
