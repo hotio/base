@@ -161,9 +161,20 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     nft add chain inet hotio prerouting '{ type nat    hook prerouting priority -100 ; }'
 
     # Create input rules
+    if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
+        IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
+        for lan_network in "${lan_networks[@]}"; do
+            ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio input iifname "${nw_interface}" ip saddr "${lan_network}" ip daddr "${default_ip}" counter accept
+        done
+    fi
     IFS=',' read -ra additional_ports <<< "${open_ports%,}"
     for additional_port in "${additional_ports[@]}"; do
-        nft add rule inet hotio input iifname "${nw_interface}" "${additional_port##*/}" dport "${additional_port%/*}" ip daddr "${default_ip}" counter accept
+        if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
+            IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
+            for lan_network in "${lan_networks[@]}"; do
+                ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio input iifname "${nw_interface}" "${additional_port##*/}" dport "${additional_port%/*}" ip saddr "${lan_network}" ip daddr "${default_ip}" counter accept
+            done
+        fi
         grep -q "${additional_port}" <<< "${VPN_PORT_REDIRECTS}" && continue
         nft add rule inet hotio input iifname "${VPN_CONF}" "${additional_port##*/}" dport "${additional_port%/*}" counter drop
     done
@@ -173,22 +184,27 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         nw_ip=$(awk '{print $7}' <<< "${network}")
         nft add rule inet hotio input iifname "${nw_if}" ip saddr "${nw_cidr}" ip daddr "${nw_ip}" counter accept
     done <<< "${networks}"
-    if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
-        IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
-        for lan_network in "${lan_networks[@]}"; do
-            nft add rule inet hotio input iifname "${nw_interface}" ip saddr "${lan_network}" ip daddr "${default_ip}" counter accept
-        done
-    fi
     nft add rule inet hotio input iifname "${VPN_CONF}" counter accept
     nft add rule inet hotio input iifname "lo" counter accept
     nft add rule inet hotio input icmp type echo-reply counter accept
     nft add rule inet hotio input icmpv6 type echo-reply counter accept
-    ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${nw_interface}" ip daddr "${default_ip}" ip saddr "${vpn_endpoint_ip}" udp sport "${vpn_endpoint_port}" counter accept
+    ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${nw_interface}" udp sport "${vpn_endpoint_port}" ip saddr "${vpn_endpoint_ip}" ip daddr "${default_ip}" counter accept
 
     # Create output rules
+    if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
+        IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
+        for lan_network in "${lan_networks[@]}"; do
+            ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${lan_network}" counter accept
+        done
+    fi
     IFS=',' read -ra additional_ports <<< "${open_ports%,}"
     for additional_port in "${additional_ports[@]}"; do
-        nft add rule inet hotio output oifname "${nw_interface}" "${additional_port##*/}" sport "${additional_port%/*}" ip saddr "${default_ip}" counter accept
+        if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
+            IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
+            for lan_network in "${lan_networks[@]}"; do
+                ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio output oifname "${nw_interface}" "${additional_port##*/}" sport "${additional_port%/*}" ip saddr "${default_ip}" ip daddr "${lan_network}" counter accept
+            done
+        fi
         grep -q "${additional_port}" <<< "${VPN_PORT_REDIRECTS}" && continue
         nft add rule inet hotio output oifname "${VPN_CONF}" "${additional_port##*/}" sport "${additional_port%/*}" counter drop
     done
@@ -198,17 +214,11 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         nw_ip=$(awk '{print $7}' <<< "${network}")
         nft add rule inet hotio output oifname "${nw_if}" ip saddr "${nw_ip}" ip daddr "${nw_cidr}" counter accept
     done <<< "${networks}"
-    if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
-        IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
-        for lan_network in "${lan_networks[@]}"; do
-            nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${lan_network}" counter accept
-        done
-    fi
     nft add rule inet hotio output oifname "${VPN_CONF}" counter accept
     nft add rule inet hotio output oifname "lo" counter accept
     nft add rule inet hotio output icmp type echo-request counter accept
     nft add rule inet hotio output icmpv6 type echo-request counter accept
-    ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" udp dport "${vpn_endpoint_port}" counter accept
+    ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${nw_interface}" udp dport "${vpn_endpoint_port}" ip saddr "${default_ip}" ip daddr "${vpn_endpoint_ip}" counter accept
 
     # List rules
     nft -s list table inet hotio
