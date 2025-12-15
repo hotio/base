@@ -10,7 +10,7 @@ setup_nameservers () {
     fi
     for nameserver in ${NAMESERVERS//,/ }; do
         if [[ "${nameserver}" == "wg" ]] && [[ "${TYPE}" == "VPN" ]]; then
-            wg_nameservers=$(grep 'DNS' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
+            wg_nameservers=$(grep '^DNS' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
             for wg_nameserver in ${wg_nameservers//,/ }; do
                 nameservers+=( "${wg_nameserver}" )
             done
