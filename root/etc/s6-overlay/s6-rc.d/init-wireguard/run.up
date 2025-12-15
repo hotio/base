@@ -155,6 +155,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
         IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
         for lan_network in "${lan_networks[@]}"; do
+            lan_network=$(xargs <<< "${lan_network}")
             ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio input iifname "${default_interface}" ip saddr "${lan_network}" ip daddr "${default_address}" counter accept
         done
     fi
@@ -163,6 +164,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
+                lan_network=$(xargs <<< "${lan_network}")
                 ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio input iifname "${default_interface}" "${port##*/}" dport "${port%/*}" ip saddr "${lan_network}" ip daddr "${default_address}" counter accept
             done
         fi
@@ -182,6 +184,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
         IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
         for lan_network in "${lan_networks[@]}"; do
+            lan_network=$(xargs <<< "${lan_network}")
             ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio output oifname "${default_interface}" ip saddr "${default_address}" ip daddr "${lan_network}" counter accept
         done
     fi
@@ -190,6 +193,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
             IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
             for lan_network in "${lan_networks[@]}"; do
+                lan_network=$(xargs <<< "${lan_network}")
                 ipcalc -4 -s -c "${lan_network}" && nft add rule inet hotio output oifname "${default_interface}" "${port##*/}" sport "${port%/*}" ip saddr "${default_address}" ip daddr "${lan_network}" counter accept
             done
         fi
