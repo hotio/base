@@ -118,6 +118,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
     for lan_network in "${lan_networks[@]}"; do
+        lan_network=$(xargs <<< "${lan_network}")
         if ipcalc -4 -s -c "${lan_network}"; then
             ip -4 route add "${lan_network}" via "${default_gateway}" dev "${default_interface}"
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added [${lan_network}][LAN] as route via interface [${default_interface}]."
