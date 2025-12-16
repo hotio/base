@@ -54,9 +54,6 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
 
     set -e
 
-    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Setting nameserver to [1.1.1.1] until Unbound starts."
-    echo "nameserver 1.1.1.1" > "/etc/resolv.conf"
-
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Creating interface [${VPN_CONF}]."
     ip link add dev "${VPN_CONF}" type wireguard
     if [[ "$(cat "/proc/sys/net/ipv6/conf/${VPN_CONF}/disable_ipv6")" == "0" ]]; then
@@ -97,7 +94,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         address=$(jq -r '.local' <<< "${network}")
         prefixlen=$(jq -r '.prefixlen' <<< "${network}")
         range="$(ipcalc -4 -s -n --no-decorate "${address}/${prefixlen}")/${prefixlen}"
-        networks+="${interface} ${address} ${range}"
+        network_list+="${interface} ${address} ${range},"
         if [[ "${interface}" == "${default_interface}" ]]; then
             note="[default]"
             default_address="${address}"
@@ -181,9 +178,10 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" && continue
         nft add rule inet hotio input iifname "${VPN_CONF}" "${port##*/}" dport "${port%/*}" counter drop
     done
-    while IFS= read -r network; do
+    IFS=',' read -ra networks <<< "${network_list%,}"
+    for network in "${networks[@]}"; do
         nft add rule inet hotio input iifname "$(awk '{print $1}' <<< "${network}")" ip saddr "$(awk '{print $3}' <<< "${network}")" ip daddr "$(awk '{print $2}' <<< "${network}")" counter accept
-    done <<< "${networks}"
+    done
     ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${default_interface}" udp sport "${vpn_endpoint_port}" ip saddr "${vpn_endpoint_ip}" ip daddr "${default_address}" counter accept
     nft add rule inet hotio input iifname "${VPN_CONF}" counter accept
     nft add rule inet hotio input iifname "lo" counter accept
@@ -210,9 +208,10 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" && continue
         nft add rule inet hotio output oifname "${VPN_CONF}" "${port##*/}" sport "${port%/*}" counter drop
     done
-    while IFS= read -r network; do
+    IFS=',' read -ra networks <<< "${network_list%,}"
+    for network in "${networks[@]}"; do
         nft add rule inet hotio output oifname "$(awk '{print $1}' <<< "${network}")" ip saddr "$(awk '{print $2}' <<< "${network}")" ip daddr "$(awk '{print $3}' <<< "${network}")" counter accept
-    done <<< "${networks}"
+    done
     ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${default_interface}" udp dport "${vpn_endpoint_port}" ip saddr "${default_address}" ip daddr "${vpn_endpoint_ip}" counter accept
     nft add rule inet hotio output oifname "${VPN_CONF}" counter accept
     nft add rule inet hotio output oifname "lo" counter accept
@@ -230,6 +229,9 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     else
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh] not found."
     fi
+
+    echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Setting nameserver to [1.1.1.1] until Unbound starts."
+    echo "nameserver 1.1.1.1" > "/etc/resolv.conf"
 
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Performing internet connectivity tests..."
 
