@@ -80,7 +80,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Starting interface [${VPN_CONF}]."
     ip link set up dev "${VPN_CONF}"
 
-    vpn_allowedips=$(wg show | grep 'allowed ips:' | awk -F ': ' '{print $2}')
+    vpn_allowedips=$(wg show "${VPN_CONF}" | grep 'allowed ips:' | awk -F ': ' '{print $2}')
     echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Allowed ips on interface [${VPN_CONF}] are [${vpn_allowedips// /}]."
 
     default_route_json=$(ip -4 -j route show to default | jq -rc '.[]')
@@ -102,7 +102,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Found network ${note}[${interface}][${address}][${range}]."
     done <<< "${networks_json}"
 
-    vpn_endpoint=$(wg show | grep endpoint: | awk '{print $2}')
+    vpn_endpoint=$(wg show "${VPN_CONF}" | grep 'endpoint:' | awk -F ': ' '{print $2}')
     vpn_endpoint_ip="${vpn_endpoint%:*}"
     vpn_endpoint_port="${vpn_endpoint##*:}"
     if ipcalc -4 -s -c "${vpn_endpoint_ip}"; then
