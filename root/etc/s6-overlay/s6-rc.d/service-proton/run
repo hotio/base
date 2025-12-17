@@ -6,7 +6,7 @@ umask "${UMASK}"
 ip_addresses=$(grep '^Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
 for ip_address in ${ip_addresses//,/ }; do
     if ipcalc -4 -s -c "${ip_address}"; then
-        ip_address=$(ipcalc -4 -s -a "${ip_address}" | awk -F '=' '{print $2}')
+        ip_address=$(ipcalc -4 -s -a --no-decorate "${ip_address}")
         vpn_gw="${ip_address%.*}.1"
         break
     fi
