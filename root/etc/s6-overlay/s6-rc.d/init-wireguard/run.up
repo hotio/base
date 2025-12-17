@@ -65,12 +65,12 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     ip_addresses=$(grep '^Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
     for ip_address in ${ip_addresses//,/ }; do
         if ipcalc -4 -s -c "${ip_address}"; then
-            ip_address=$(ipcalc -4 -s -a "${ip_address}" | awk -F '=' '{print $2}')
+            ip_address=$(ipcalc -4 -s -a --no-decorate "${ip_address}")
             ip -4 address add dev "${VPN_CONF}" "${ip_address}"
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv4 address [${ip_address}] to interface [${VPN_CONF}]."
         fi
         if ipcalc -6 -s -c "${ip_address}" && [[ ${ipv6_available} == "true" ]]; then
-            ip_address=$(ipcalc -6 -s -a "${ip_address}" | awk -F '=' '{print $2}')
+            ip_address=$(ipcalc -6 -s -a --no-decorate "${ip_address}")
             ip -6 address add dev "${VPN_CONF}" "${ip_address}"
             echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Added IPv6 address [${ip_address}] to interface [${VPN_CONF}]."
         fi
