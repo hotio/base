@@ -88,7 +88,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     default_gateway=$(jq -r '.gateway' <<< "${default_route_json}")
 
     networks_json=$(ip -4 -j address show | jq -rc '.[]|select((.addr_info[].label|startswith("eth")) or (.addr_info[].label|startswith("enp")))|.addr_info[]')
-    while IFS= read -r network; do
+    while IFS=$'\n' read -r network; do
         note="         "
         interface=$(jq -r '.label' <<< "${network}")
         address=$(jq -r '.local' <<< "${network}")
@@ -180,7 +180,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     done
     IFS=',' read -ra networks <<< "${network_list%,}"
     for network in "${networks[@]}"; do
-        nft add rule inet hotio input iifname "$(awk '{print $1}' <<< "${network}")" ip saddr "$(awk '{print $3}' <<< "${network}")" ip daddr "$(awk '{print $2}' <<< "${network}")" counter accept
+        IFS=' ' read -ra part <<< "${network}"
+        nft add rule inet hotio input iifname "${part[0]}" ip saddr "${part[2]}" ip daddr "${part[1]}" counter accept
     done
     ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${default_interface}" udp sport "${vpn_endpoint_port}" ip saddr "${vpn_endpoint_ip}" ip daddr "${default_address}" counter accept
     nft add rule inet hotio input iifname "${VPN_CONF}" counter accept
@@ -210,7 +211,8 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     done
     IFS=',' read -ra networks <<< "${network_list%,}"
     for network in "${networks[@]}"; do
-        nft add rule inet hotio output oifname "$(awk '{print $1}' <<< "${network}")" ip saddr "$(awk '{print $2}' <<< "${network}")" ip daddr "$(awk '{print $3}' <<< "${network}")" counter accept
+        IFS=' ' read -ra part <<< "${network}"
+        nft add rule inet hotio output oifname "${part[0]}" ip saddr "${part[1]}" ip daddr "${part[2]}" counter accept
     done
     ipcalc -4 -s -c "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${default_interface}" udp dport "${vpn_endpoint_port}" ip saddr "${default_address}" ip daddr "${vpn_endpoint_ip}" counter accept
     nft add rule inet hotio output oifname "${VPN_CONF}" counter accept
