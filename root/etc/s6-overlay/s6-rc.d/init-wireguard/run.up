@@ -65,12 +65,12 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     ip_addresses=$(grep '^Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
     for ip_address in ${ip_addresses//,/ }; do
         if valid4 "${ip_address}"; then
-            ip_address=$(ipcalc -4 -s -a --no-decorate "${ip_address}")
+            ip_address=$(get4 "${ip_address}")
             ip -4 address add dev "${VPN_CONF}" "${ip_address}"
             log_inf "[VPN] Added IPv4 address [${ip_address}] to interface [${VPN_CONF}]."
         fi
         if valid6 "${ip_address}" && [[ ${ipv6_available} == "true" ]]; then
-            ip_address=$(ipcalc -6 -s -a --no-decorate "${ip_address}")
+            ip_address=$(get6 "${ip_address}")
             ip -6 address add dev "${VPN_CONF}" "${ip_address}"
             log_inf "[VPN] Added IPv6 address [${ip_address}] to interface [${VPN_CONF}]."
         fi
@@ -93,13 +93,13 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         interface=$(jq -r '.label' <<< "${network}")
         address=$(jq -r '.local' <<< "${network}")
         prefixlen=$(jq -r '.prefixlen' <<< "${network}")
-        range="$(ipcalc -4 -s -n --no-decorate "${address}/${prefixlen}")/${prefixlen}"
-        network_list+="${interface} ${address} ${range},"
+        net="$(get4net "${address}/${prefixlen}")/${prefixlen}"
+        network_list+="${interface} ${address} ${net},"
         if [[ "${interface}" == "${default_interface}" ]]; then
             note="[default]"
             default_address="${address}"
         fi
-        log_inf "[VPN] Found network ${note}[${interface}][${address}][${range}]."
+        log_inf "[VPN] Found network ${note}[${interface}][${address}][${net}]."
     done <<< "${networks_json}"
 
     vpn_endpoint=$(wg show "${VPN_CONF}" | grep 'endpoint:' | awk -F ': ' '{print $2}')
@@ -232,41 +232,25 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         log_inf "[VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh] not found."
     fi
 
-    log_inf "[VPN] Setting nameserver to [1.1.1.1] until Unbound starts."
-    echo "nameserver 1.1.1.1" > "/etc/resolv.conf"
-
     log_inf "[VPN] Performing internet connectivity tests..."
 
-    ping4=$(ping -c 5 1.1.1.1 2> /dev/null | tail -1 | awk -F ' = ' '{print $2}')
-    if [[ -z ${ping4} ]]; then
-        log_err "[VPN] [IPV4] Ping test failed!"
-        [[ ${VPN_HEALTHCHECK_ENABLED} == "true" ]] && exit 1
-    else
-        log_inf "[VPN] [IPV4] [PING: ${ping4}]"
-    fi
-
-    ip4=$(curl -fsL -4 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')
+    ip4=$(curl -fsL -4 --dns-servers 1.1.1.1,1.0.0.1 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')
     if [[ -z ${ip4} ]]; then
         log_err "[VPN] [IPV4] IP lookup failed!"
         [[ ${VPN_HEALTHCHECK_ENABLED} == "true" ]] && exit 1
     else
-        log_inf "[VPN] [IPV4] ${ip4}"
+        ping4=$(ping -c 5 1.1.1.1 2> /dev/null | tail -1 | awk -F ' = ' '{print $2}')
+        log_inf "[VPN] [IPV4] [PING: ${ping4}] ${ip4}"
     fi
 
     if [[ ${ipv6_available} == "true" ]]; then
-        ping6=$(ping6 -c 5 2606:4700:4700::1111 2> /dev/null | tail -1 | awk -F ' = ' '{print $2}')
-        if [[ -z ${ping6} ]]; then
-            log_err "[VPN] [IPV6] Ping test failed!"
-            [[ ${VPN_HEALTHCHECK_ENABLED} == "true" ]] && exit 1
-        else
-            log_inf "[VPN] [IPV6] [PING: ${ping6}]"
-        fi
-        ip6=$(curl -fsL -6 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')
+        ip6=$(curl -fsL -6 --dns-servers 2606:4700:4700::1111,2606:4700:4700::1001 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')
         if [[ -z ${ip6} ]]; then
             log_err "[VPN] [IPV6] IP lookup failed!"
             [[ ${VPN_HEALTHCHECK_ENABLED} == "true" ]] && exit 1
         else
-            log_inf "[VPN] [IPV6] ${ip6}"
+            ping6=$(ping6 -c 5 2606:4700:4700::1111 2> /dev/null | tail -1 | awk -F ' = ' '{print $2}')
+            log_inf "[VPN] [IPV6] [PING: ${ping6}] ${ip6}"
         fi
     fi
 fi

@@ -2,6 +2,10 @@
 
 valid4() { ipcalc -4 -s -c "$1"; }
 valid6() { ipcalc -6 -s -c "$1"; }
+get4() { ipcalc -4 -s -a --no-decorate "$1"; }
+get6() { ipcalc -6 -s -a --no-decorate "$1"; }
+get4net() { ipcalc -4 -s -n --no-decorate "$1"; }
+get6net() { ipcalc -6 -s -n --no-decorate "$1"; }
 
 ts() { date '+%Y-%m-%d %H:%M:%S'; }
 log() { printf '[%s] %s\n' "$(ts)" "$*"; }
@@ -9,7 +13,7 @@ log_inf() { log "[INF] $*"; }
 log_wrn() { log "[WRN] $*"; }
 log_err() { log "[ERR] $*" >&2; }
 
-setup_nameservers () {
+setup_nameservers() {
     if [[ "${VPN_ENABLED}" != true ]]; then
         TYPE="UNBOUND"
         NAMESERVERS="${UNBOUND_NAMESERVERS}"
