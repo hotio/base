@@ -2,6 +2,7 @@
 # shellcheck shell=bash
 
 # shellcheck source=/dev/null
+source /etc/s6-overlay/scripts/general-functions
 source /etc/s6-overlay/scripts/pia-functions
 
 umask "${UMASK}"
@@ -11,10 +12,10 @@ pia_server_ip=$(grep '^# ip: ' "/dev/shm/${VPN_CONF}.conf" | awk -F ': ' '{print
 
 while true; do
     if [[ "${VPN_PIA_PORT_FORWARD_PERSIST}" == "true" ]] && [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json" ]]; then
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Using persistent forwarded port."
+        log_inf "[PIA] Using persistent forwarded port."
         pia_response=$(cat "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json")
     else
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Fetching new forwarded port..."
+        log_inf "[PIA] Fetching new forwarded port..."
         pia_response=$(curl --retry 5 --retry-max-time 60 --max-time 10 --interface "${VPN_CONF}" -Gs --connect-to "$pia_server_hostname::$pia_server_ip:" --cacert "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" --data-urlencode "token=$(get_token)" "https://${pia_server_hostname}:19999/getSignature")
     fi
     if [[ $(echo "${pia_response}" | jq -re '.status') == "OK" ]]; then
@@ -25,18 +26,18 @@ while true; do
         pia_port=$(jq -re '.port' <<< "${pia_payload_decoded}")
         pia_port_expiration=$(jq -re '.expires_at' <<< "${pia_payload_decoded}")
         [[ $(date -d "${pia_port_expiration}" +%s) -lt $(date -d "$(date)" +%s) ]] && rm -rf "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json" && continue
-        echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Forwarded port will expire at [${pia_port_expiration}]."
+        log_inf "[PIA] Forwarded port will expire at [${pia_port_expiration}]."
         echo "${pia_port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
         while [[ $(date -d "${pia_port_expiration}" +%s) -gt $(date -d "$(date)" +%s) ]]; do
             bind_port_response="$(curl --retry 5 --retry-max-time 60 --max-time 10 --interface "${VPN_CONF}" -Gs --connect-to "$pia_server_hostname::$pia_server_ip:" --cacert "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pia_server_hostname}:19999/bindPort")"
             if ! [[ $(jq -re '.status' <<< "${bind_port_response}") == "OK" ]]; then
-                echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Port bind failed!"
+                log_wrn "[PIA] Port bind failed!"
                 break
             fi
             sleep 900
         done
     else
-        echo "[WRN] [$(date '+%Y-%m-%d %H:%M:%S')] [PIA] Signature and Payload retrieval failed!"
+        log_wrn "[PIA] Signature and Payload retrieval failed!"
     fi
     sleep 60
 done

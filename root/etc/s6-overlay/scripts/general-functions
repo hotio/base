@@ -1,5 +1,14 @@
 # shellcheck shell=bash
 
+valid4() { ipcalc -4 -s -c "$1"; }
+valid6() { ipcalc -6 -s -c "$1"; }
+
+ts() { date '+%Y-%m-%d %H:%M:%S'; }
+log() { printf '[%s] %s\n' "$(ts)" "$*"; }
+log_inf() { log "[INF] $*"; }
+log_wrn() { log "[WRN] $*"; }
+log_err() { log "[ERR] $*" >&2; }
+
 setup_nameservers () {
     if [[ "${VPN_ENABLED}" != true ]]; then
         TYPE="UNBOUND"
@@ -37,12 +46,12 @@ setup_nameservers () {
     if [[ ${#nameservers_dot[@]} -gt 0 ]]; then
         echo '        forward-tls-upstream: yes' >> "/dev/shm/unbound.conf"
         for nameserver in "${nameservers_dot[@]}"; do
-            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [UNBOUND] Adding nameserver [${TYPE}][${nameserver}]."
+            log_inf "[UNBOUND] Adding nameserver [${TYPE}][${nameserver}]."
             echo "        forward-addr: ${nameserver}" >> "/dev/shm/unbound.conf"
         done
     elif [[ ${#nameservers[@]} -gt 0 ]]; then
         for nameserver in "${nameservers[@]}"; do
-            echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [UNBOUND] Adding nameserver [${TYPE}][${nameserver}]."
+            log_inf "[UNBOUND] Adding nameserver [${TYPE}][${nameserver}]."
             echo "        forward-addr: ${nameserver}" >> "/dev/shm/unbound.conf"
         done
     fi
