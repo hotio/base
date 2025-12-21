@@ -3,7 +3,7 @@
 # shellcheck source=/dev/null
 source /etc/s6-overlay/scripts/general-functions
 
-get_token () {
+get_token() {
     local pia_token=""
     local pia_token_expires_at=""
     while [[ -z "${pia_token}" ]]; do
@@ -28,7 +28,7 @@ get_token () {
     echo "${pia_token}"
 }
 
-download_pia_wg () {
+download_pia_wg() {
     if [[ ! $(find "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" -mtime -1 2>/dev/null) ]]; then
         log_inf "[PIA] Fetching certificate..."
         curl -fsL --retry 5 --retry-max-time 60 --max-time 10 'https://raw.githubusercontent.com/pia-foss/manual-connections/master/ca.rsa.4096.crt' -o "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" || exit 1
