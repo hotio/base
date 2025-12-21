@@ -50,6 +50,12 @@ while true; do
             done
             # shellcheck source=/dev/null
             source "${APP_DIR}/forwarded_port_update_app"
+            if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh" ]]; then
+                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh] found. Executing..."
+                bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh"
+            else
+                echo "[INF] [$(date '+%Y-%m-%d %H:%M:%S')] [VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh] not found."
+            fi
             old_port="${port}"
         fi
     fi
