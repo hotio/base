@@ -232,14 +232,9 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
         log_inf "[VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh] not found."
     fi
 
-    log_inf "[VPN] Setting custom nameservers until Unbound starts."
-    echo "nameserver 1.1.1.1" > "/etc/resolv.conf"
-    if [[ ${ipv6_available} == "true" ]]; then
-        echo "nameserver 2606:4700:4700::1111" >> "/etc/resolv.conf"
-    fi
-
     log_inf "[VPN] Performing internet connectivity tests..."
 
+    echo "nameserver 1.1.1.1" > "/etc/resolv.conf"
     ip4=$(curl -fsL -4 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')
     if [[ -z ${ip4} ]]; then
         log_err "[VPN] [IPV4] IP lookup failed!"
@@ -250,6 +245,7 @@ if [[ ${VPN_ENABLED} == "true" ]]; then
     fi
 
     if [[ ${ipv6_available} == "true" ]]; then
+        echo "nameserver 2606:4700:4700::1111" > "/etc/resolv.conf"
         ip6=$(curl -fsL -6 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')
         if [[ -z ${ip6} ]]; then
             log_err "[VPN] [IPV6] IP lookup failed!"
