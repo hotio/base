@@ -56,8 +56,6 @@ while true; do
             if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh" ]]; then
                 log_inf "[VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh] found. Executing..."
                 bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh"
-            else
-                log_inf "[VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh] not found."
             fi
             old_port="${port}"
         fi
