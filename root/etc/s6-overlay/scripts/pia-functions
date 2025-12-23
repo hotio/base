@@ -36,7 +36,7 @@ download_pia_wg() {
     if [[ "${VPN_PIA_DIP_TOKEN}" == "no" ]]; then
         while [[ ! $(find "${CONFIG_DIR}/wireguard/pia-regions.json" -mtime -1 2>/dev/null) ]]; do
             log_inf "[PIA] Fetching regions data..."
-            region_data=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -re .)
+            region_data=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 https://serverlist.piaservers.net/vpninfo/servers/v7 | head -1 | jq -re .)
             if [[ "$(jq -re '.groups.wg[].name' <<< "${region_data}")" == "wireguard" ]]; then
                 echo "${region_data}" > "${CONFIG_DIR}/wireguard/pia-regions.json" && \
                     log_inf "[PIA] Regions data saved in [${CONFIG_DIR}/wireguard/pia-regions.json]."
@@ -88,7 +88,7 @@ download_pia_wg() {
         echo "[Peer]"
         echo "PersistentKeepalive = 25"
         echo "PublicKey = $(jq -re '.server_key' <<< "${wg_json_response}")"
-        echo "AllowedIPs = 0.0.0.0/0"
+        echo "AllowedIPs = 0.0.0.0/0,::/0"
         echo "Endpoint = ${pia_server_ip}:$(jq -re '.server_port' <<< "${wg_json_response}")"
         } > "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf"
         find "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +

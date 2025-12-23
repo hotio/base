@@ -52,12 +52,7 @@ set -e
 
 log_inf "[VPN] Creating interface [${VPN_CONF}]."
 ip link add dev "${VPN_CONF}" type wireguard
-if [[ "$(cat "/proc/sys/net/ipv6/conf/${VPN_CONF}/disable_ipv6")" == "0" ]]; then
-    ipv6_available="true"
-    log_inf "[VPN] IPv6 is available on interface [${VPN_CONF}]. Disable with [--sysctl=\"net.ipv6.conf.all.disable_ipv6=1\"] if you have no need for IPv6."
-else
-    log_inf "[VPN] IPv6 is not available on interface [${VPN_CONF}]. Enable with [--sysctl=\"net.ipv6.conf.all.disable_ipv6=0\"] if you have a need for IPv6."
-fi
+[[ "$(cat "/proc/sys/net/ipv6/conf/${VPN_CONF}/disable_ipv6")" == "0" ]] && ipv6_available="true"
 ip_addresses=$(grep '^Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
 for ip_address in ${ip_addresses//,/ }; do
     if valid4 "${ip_address}"; then
@@ -68,14 +63,31 @@ for ip_address in ${ip_addresses//,/ }; do
     if valid6 "${ip_address}" && [[ ${ipv6_available} == "true" ]]; then
         ip_address=$(get6 "${ip_address}")
         ip -6 address add dev "${VPN_CONF}" "${ip_address}"
+        ipv6_wanted="true"
         log_inf "[VPN] Added IPv6 address [${ip_address}] to interface [${VPN_CONF}]."
     fi
+    if valid6 "${ip_address}" && [[ ${ipv6_available} != "true" ]]; then
+        log_wrn "[VPN] Configuration file [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf] contains an IPv6 address [${ip_address}], but IPv6 is not available on interface [${VPN_CONF}]. Add [--sysctl=\"net.ipv6.conf.all.disable_ipv6=0\"] if you need IPv6."
+    fi
 done
+ip_addresses=$(grep '^AllowedIPs' "/dev/shm/${VPN_CONF}-stripped.conf" | awk -F '=' '{print $2}' | xargs)
+for ip_address in ${ip_addresses//,/ }; do
+    if valid4 "${ip_address}"; then
+        allowed_ips+="${ip_address},"
+    fi
+    if valid6 "${ip_address}" && [[ ${ipv6_wanted} == "true" ]]; then
+        allowed_ips+="${ip_address},"
+        ipv6_allowedips_found="true"
+    fi
+done
+sed -i "s#^AllowedIPs.*#AllowedIPs = ${allowed_ips%,}#" "/dev/shm/${VPN_CONF}-stripped.conf"
+log_inf "[VPN] AllowedIPs are [${allowed_ips%,}] for interface [${VPN_CONF}]."
+if [[ "${ipv6_wanted}" == "true" ]] && [[ "${ipv6_allowedips_found}" != "true" ]]; then
+    log_wrn "[VPN] IPv6 support is wanted, but AllowedIPs for interface [${VPN_CONF}] has no IPv6 address configured."
+fi
 wg setconf "${VPN_CONF}" "/dev/shm/${VPN_CONF}-stripped.conf"
-
 ip link set up dev "${VPN_CONF}"
-vpn_allowedips=$(wg show "${VPN_CONF}" | grep 'allowed ips:' | awk -F ': ' '{print $2}')
-log_inf "[VPN] Interface [${VPN_CONF}] is online, allowed ips are [${vpn_allowedips// /}]."
+log_inf "[VPN] Interface [${VPN_CONF}] is online."
 
 default_route_json=$(ip -4 -j route show to default | jq -rc '.[]')
 default_interface=$(jq -r '.dev' <<< "${default_route_json}")
@@ -123,7 +135,7 @@ done
 
 ip -4 route del default > /dev/null 2>&1
 ip -4 route add default dev "${VPN_CONF}"
-if [[ ${ipv6_available} == "true" ]]; then
+if [[ ${ipv6_wanted} == "true" ]]; then
     ip -6 route del default > /dev/null 2>&1 || true
     ip -6 route add default dev "${VPN_CONF}"
 fi
@@ -231,7 +243,7 @@ else
     log_inf "[VPN] [IPV4] [PING: ${ping4}] ${ip4}"
 fi
 
-if [[ ${ipv6_available} == "true" ]]; then
+if [[ ${ipv6_wanted} == "true" ]]; then
     echo "nameserver 2606:4700:4700::1111" > "/etc/resolv.conf"
     ip6=$(curl -fsL -6 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')
     if [[ -z ${ip6} ]]; then
