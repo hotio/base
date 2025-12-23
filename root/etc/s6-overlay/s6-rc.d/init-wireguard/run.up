@@ -15,17 +15,21 @@ if [[ -n ${VPN_AUTO_PORT_FORWARD_TO_PORTS} ]]; then
 fi
 
 if ! capsh --print | grep -q "Current:.*cap_net_admin"; then
-    log_err "[VPN] [--cap-add=NET_ADMIN] is not set or running with [--privileged=true]. Exiting..."
-    echo "Add: --cap-add=NET_ADMIN"
-    echo "Remove: --privileged=true"
+    log_err "[VPN] Not the right capabilities, add [--cap-add=NET_ADMIN] and remove [--privileged=true] if set! Exiting..."
     exit 1
 fi
 
 if ip a show docker0 up > /dev/null 2>&1; then
-    log_err "[VPN] Docker network type [host] is not supported with VPN enabled. Exiting..."
-    echo "Use: bridge (preferably custom)"
+    log_err "[VPN] Docker network type [host] is not supported, use [bridge] instead! Exiting..."
     exit 1
 fi
+
+for file in /proc/sys/net/ipv4/conf/{all,default}; do
+    if [[ "$(cat "/proc/sys/net/ipv4/conf/${file##*/}/rp_filter")" == "1" ]]; then
+        log_err "[VPN] The value for [rp_filter] is set to [Strict Mode], add [--sysctl=\"net.ipv4.conf.all.rp_filter=2\"]! Exiting..."
+        exit 1
+    fi
+done
 
 if [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
     mkdir "${CONFIG_DIR}/wireguard"
@@ -43,7 +47,7 @@ if [[ ${VPN_PROVIDER} == "pia" ]]; then
 fi
 
 if [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
-    log_err "[VPN] Configuration file [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf] was not found. Exiting..."
+    log_err "[VPN] Configuration file [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf] was not found! Exiting..."
     exit 1
 else
     dos2unix -q -n "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" "/dev/shm/${VPN_CONF}.conf"
@@ -105,8 +109,10 @@ vpn_endpoint=$(wg show "${VPN_CONF}" | grep 'endpoint:' | awk -F ': ' '{print $2
 vpn_endpoint_ip="${vpn_endpoint%:*}"
 vpn_endpoint_port="${vpn_endpoint##*:}"
 if valid4 "${vpn_endpoint_ip}"; then
-    ip -4 route add "${vpn_endpoint_ip}" via "${default_gateway}" dev "${default_interface}"
-    log_inf "[VPN] Added [${vpn_endpoint_ip}][ENDPOINT] as route via interface [${default_interface}]."
+    #ip -4 route add "${vpn_endpoint_ip}" via "${default_gateway}" dev "${default_interface}"
+    ip -4 route add table "${vpn_endpoint_port}" "${vpn_endpoint_ip}" via "${default_gateway}" dev "${default_interface}"
+    ip -4 rule add iif lo ipproto udp dport "${vpn_endpoint_port}" lookup "${vpn_endpoint_port}"
+    log_inf "[VPN] Added [${vpn_endpoint_ip}][ENDPOINT] as route via interface [${default_interface}] for port [${vpn_endpoint_port}]."
 else
     log_err "[VPN] Could not add route for [${vpn_endpoint_ip}][ENDPOINT], not supported! Exiting..."
     exit 1
