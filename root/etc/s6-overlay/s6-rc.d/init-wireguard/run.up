@@ -52,7 +52,12 @@ set -e
 
 log_inf "[VPN] Creating interface [${VPN_CONF}]."
 ip link add dev "${VPN_CONF}" type wireguard
-[[ "$(cat "/proc/sys/net/ipv6/conf/${VPN_CONF}/disable_ipv6")" == "0" ]] && ipv6_available="true"
+if [[ "$(cat "/proc/sys/net/ipv6/conf/${VPN_CONF}/disable_ipv6")" == "0" ]]; then
+    ipv6_available="true"
+    log_inf "[VPN] IPv6 support is available on interface [${VPN_CONF}]."
+else
+    log_inf "[VPN] IPv6 support is not available on interface [${VPN_CONF}]."
+fi
 ip_addresses=$(grep '^Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
 for ip_address in ${ip_addresses//,/ }; do
     if valid4 "${ip_address}"; then
@@ -67,7 +72,7 @@ for ip_address in ${ip_addresses//,/ }; do
         log_inf "[VPN] Added IPv6 address [${ip_address}] to interface [${VPN_CONF}]."
     fi
     if valid6 "${ip_address}" && [[ ${ipv6_available} != "true" ]]; then
-        log_wrn "[VPN] Configuration file [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf] contains an IPv6 address [${ip_address}], but IPv6 is not available on interface [${VPN_CONF}]. Add [--sysctl=\"net.ipv6.conf.all.disable_ipv6=0\"] if you need IPv6."
+        log_wrn "[VPN] Failed adding IPv6 address [${ip_address}] to interface [${VPN_CONF}]. Try adding [--sysctl=\"net.ipv6.conf.all.disable_ipv6=0\"]."
     fi
 done
 ip_addresses=$(grep '^AllowedIPs' "/dev/shm/${VPN_CONF}-stripped.conf" | awk -F '=' '{print $2}' | xargs)
@@ -80,11 +85,13 @@ for ip_address in ${ip_addresses//,/ }; do
         ipv6_allowedips_found="true"
     fi
 done
+if [[ "${ipv6_wanted}" == "true" ]] && [[ "${ipv6_allowedips_found}" != "true" ]]; then
+    allowed_ips+="::/0,"
+    log_wrn "[VPN] IPv6 is wanted, but AllowedIPs for interface [${VPN_CONF}] has no IPv6 address configured. Added default [::/0]."
+fi
 sed -i "s#^AllowedIPs.*#AllowedIPs = ${allowed_ips%,}#" "/dev/shm/${VPN_CONF}-stripped.conf"
 log_inf "[VPN] AllowedIPs are [${allowed_ips%,}] for interface [${VPN_CONF}]."
-if [[ "${ipv6_wanted}" == "true" ]] && [[ "${ipv6_allowedips_found}" != "true" ]]; then
-    log_wrn "[VPN] IPv6 support is wanted, but AllowedIPs for interface [${VPN_CONF}] has no IPv6 address configured."
-fi
+
 wg setconf "${VPN_CONF}" "/dev/shm/${VPN_CONF}-stripped.conf"
 ip link set up dev "${VPN_CONF}"
 log_inf "[VPN] Interface [${VPN_CONF}] is online."
