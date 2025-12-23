@@ -24,13 +24,6 @@ if ip a show docker0 up > /dev/null 2>&1; then
     exit 1
 fi
 
-for file in /proc/sys/net/ipv4/conf/{all,default}; do
-    if [[ "$(cat "/proc/sys/net/ipv4/conf/${file##*/}/rp_filter")" == "1" ]]; then
-        log_err "[VPN] The value for [rp_filter] is set to [Strict Mode], add [--sysctl=\"net.ipv4.conf.all.rp_filter=2\"]! Exiting..."
-        exit 1
-    fi
-done
-
 if [[ ! -d "${CONFIG_DIR}/wireguard/" ]]; then
     mkdir "${CONFIG_DIR}/wireguard"
     find "${CONFIG_DIR}/wireguard" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
@@ -80,11 +73,9 @@ for ip_address in ${ip_addresses//,/ }; do
 done
 wg setconf "${VPN_CONF}" "/dev/shm/${VPN_CONF}-stripped.conf"
 
-log_inf "[VPN] Starting interface [${VPN_CONF}]."
 ip link set up dev "${VPN_CONF}"
-
 vpn_allowedips=$(wg show "${VPN_CONF}" | grep 'allowed ips:' | awk -F ': ' '{print $2}')
-log_inf "[VPN] Allowed ips on interface [${VPN_CONF}] are [${vpn_allowedips// /}]."
+log_inf "[VPN] Interface [${VPN_CONF}] is online, allowed ips are [${vpn_allowedips// /}]."
 
 default_route_json=$(ip -4 -j route show to default | jq -rc '.[]')
 default_interface=$(jq -r '.dev' <<< "${default_route_json}")
@@ -110,10 +101,11 @@ vpn_endpoint_ip="${vpn_endpoint%:*}"
 vpn_endpoint_port="${vpn_endpoint##*:}"
 if valid4 "${vpn_endpoint_ip}"; then
     ip -4 route add "${vpn_endpoint_ip}" via "${default_gateway}" dev "${default_interface}" table "${vpn_endpoint_port}"
-    ip -4 rule add iif lo ipproto udp dport "${vpn_endpoint_port}" table "${vpn_endpoint_port}"
-    log_inf "[VPN] Added [${vpn_endpoint_ip}][ENDPOINT] as route via interface [${default_interface}] for port [${vpn_endpoint_port}]."
+    ip -4 rule add ipproto udp dport "${vpn_endpoint_port}" to "${vpn_endpoint_ip}" table "${vpn_endpoint_port}" iif lo
+    ip -4 rule add ipproto udp sport "${vpn_endpoint_port}" from "${vpn_endpoint_ip}" table "${vpn_endpoint_port}"
+    log_inf "[VPN] Routing traffic for [${vpn_endpoint_ip}][${vpn_endpoint_port}][ENDPOINT] via interface [${default_interface}]."
 else
-    log_err "[VPN] Could not add route for [${vpn_endpoint_ip}][ENDPOINT], not supported! Exiting..."
+    log_err "[VPN] Failed adding route for [${vpn_endpoint_ip}][${vpn_endpoint_port}][ENDPOINT], only IPv4 supported! Exiting..."
     exit 1
 fi
 
@@ -122,9 +114,9 @@ for lan_network in "${lan_networks[@]}"; do
     lan_network="${lan_network// /}"
     if valid4 "${lan_network}"; then
         ip -4 route add "${lan_network}" via "${default_gateway}" dev "${default_interface}"
-        log_inf "[VPN] Added [${lan_network}][LAN] as route via interface [${default_interface}]."
+        log_inf "[VPN] Routing traffic for [${lan_network}][LAN] via interface [${default_interface}]."
     else
-        log_err "[VPN] Could not add route for [${lan_network}][LAN], not supported! Exiting..."
+        log_err "[VPN] Failed adding route for [${lan_network}][LAN], only IPv4 supported! Exiting..."
         exit 1
     fi
 done
@@ -135,16 +127,7 @@ if [[ ${ipv6_available} == "true" ]]; then
     ip -6 route del default > /dev/null 2>&1 || true
     ip -6 route add default dev "${VPN_CONF}"
 fi
-log_inf "[VPN] Changed [default] route via interface [${VPN_CONF}]."
-
-log_inf "[VPN] IPv4 routes:"
-ip -4 -o route show
-log_inf "[VPN] IPv4 routes [table ${vpn_endpoint_port}]:"
-ip -4 -o route show table "${vpn_endpoint_port}"
-if [[ ${ipv6_available} == "true" ]]; then
-    log_inf "[VPN] IPv6 routes:"
-    ip -6 -o route show
-fi
+log_inf "[VPN] Routing all other traffic via interface [${VPN_CONF}]."
 
 log_inf "[VPN] Firewall rules:"
 
@@ -157,7 +140,7 @@ for port in "${ports[@]}"; do
     exposed_ports+="${port// /},"
 done
 
-# Create chains
+# Create table and chains
 nft add table inet hotio
 nft add chain inet hotio forward    '{ type filter hook forward    priority 0 ; policy drop; }'
 nft add chain inet hotio input      '{ type filter hook input      priority 0 ; policy drop; }'
@@ -236,7 +219,7 @@ if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh" ]]; then
     bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh"
 fi
 
-log_inf "[VPN] Performing internet connectivity tests..."
+log_inf "[VPN] Performing internet connectivity tests, please wait..."
 
 echo "nameserver 1.1.1.1" > "/etc/resolv.conf"
 ip4=$(curl -fsL -4 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')
