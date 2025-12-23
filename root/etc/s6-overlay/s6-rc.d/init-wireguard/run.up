@@ -109,9 +109,8 @@ vpn_endpoint=$(wg show "${VPN_CONF}" | grep 'endpoint:' | awk -F ': ' '{print $2
 vpn_endpoint_ip="${vpn_endpoint%:*}"
 vpn_endpoint_port="${vpn_endpoint##*:}"
 if valid4 "${vpn_endpoint_ip}"; then
-    #ip -4 route add "${vpn_endpoint_ip}" via "${default_gateway}" dev "${default_interface}"
-    ip -4 route add table "${vpn_endpoint_port}" "${vpn_endpoint_ip}" via "${default_gateway}" dev "${default_interface}"
-    ip -4 rule add iif lo ipproto udp dport "${vpn_endpoint_port}" lookup "${vpn_endpoint_port}"
+    ip -4 route add "${vpn_endpoint_ip}" via "${default_gateway}" dev "${default_interface}" table "${vpn_endpoint_port}"
+    ip -4 rule add iif lo ipproto udp dport "${vpn_endpoint_port}" table "${vpn_endpoint_port}"
     log_inf "[VPN] Added [${vpn_endpoint_ip}][ENDPOINT] as route via interface [${default_interface}] for port [${vpn_endpoint_port}]."
 else
     log_err "[VPN] Could not add route for [${vpn_endpoint_ip}][ENDPOINT], not supported! Exiting..."
@@ -138,14 +137,16 @@ if [[ ${ipv6_available} == "true" ]]; then
 fi
 log_inf "[VPN] Changed [default] route via interface [${VPN_CONF}]."
 
-log_inf "[VPN] IPv4 routes overview:"
+log_inf "[VPN] IPv4 routes:"
 ip -4 -o route show
+log_inf "[VPN] IPv4 routes [table ${vpn_endpoint_port}]:"
+ip -4 -o route show table "${vpn_endpoint_port}"
 if [[ ${ipv6_available} == "true" ]]; then
-    log_inf "[VPN] IPv6 routes overview:"
+    log_inf "[VPN] IPv6 routes:"
     ip -6 -o route show
 fi
 
-log_inf "[VPN] Firewall rules overview:"
+log_inf "[VPN] Firewall rules:"
 
 IFS=',' read -ra ports <<< "${WEBUI_PORTS%,}"
 for port in "${ports[@]}"; do
