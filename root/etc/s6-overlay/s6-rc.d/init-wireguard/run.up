@@ -136,27 +136,35 @@ done <<< "${interfaces}"
 vpn_endpoint=$(wg show "${VPN_CONF}" | grep 'endpoint:' | awk -F ': ' '{print $2}' | sed -e 's#\[##' -e 's#\]##')
 vpn_endpoint_ip="${vpn_endpoint%:*}"
 vpn_endpoint_port="${vpn_endpoint##*:}"
-if valid4 "${vpn_endpoint_ip}"; then
+if valid4 "${vpn_endpoint_ip}" && valid4 "${default4_gateway}"; then
     ip -4 route add "${vpn_endpoint_ip}" via "${default4_gateway}" dev "${default4_interface}" table "${vpn_endpoint_port}"
     ip -4 rule add ipproto udp dport "${vpn_endpoint_port}" to "${vpn_endpoint_ip}" table "${vpn_endpoint_port}" iif lo
     ip -4 rule add ipproto udp sport "${vpn_endpoint_port}" from "${vpn_endpoint_ip}" table "${vpn_endpoint_port}"
     log_inf "[VPN] Routing IPv4 traffic for [${vpn_endpoint_ip}][${vpn_endpoint_port}][ENDPOINT] via interface [${default4_interface}]."
 fi
-if valid6 "${vpn_endpoint_ip}"; then
+if valid4 "${vpn_endpoint_ip}" && ! valid4 "${default4_gateway}"; then
+    log_err "[VPN] There is no IPv4 default gateway for [${vpn_endpoint_ip}][${vpn_endpoint_port}][ENDPOINT]! Exiting..."
+    exit 1
+fi
+if valid6 "${vpn_endpoint_ip}" && valid6 "${default6_gateway}"; then
     ip -6 route add "${vpn_endpoint_ip}" via "${default6_gateway}" dev "${default6_interface}" table "${vpn_endpoint_port}"
     ip -6 rule add ipproto udp dport "${vpn_endpoint_port}" to "${vpn_endpoint_ip}" table "${vpn_endpoint_port}" iif lo
     ip -6 rule add ipproto udp sport "${vpn_endpoint_port}" from "${vpn_endpoint_ip}" table "${vpn_endpoint_port}"
     log_inf "[VPN] Routing IPv6 traffic for [${vpn_endpoint_ip}][${vpn_endpoint_port}][ENDPOINT] via interface [${default6_interface}]."
 fi
+if valid6 "${vpn_endpoint_ip}" && ! valid6 "${default6_gateway}"; then
+    log_err "[VPN] There is no IPv6 default gateway for [${vpn_endpoint_ip}][${vpn_endpoint_port}][ENDPOINT]! Exiting..."
+    exit 1
+fi
 
 IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
 for lan_network in "${lan_networks[@]}"; do
     lan_network="${lan_network// /}"
-    if valid4 "${lan_network}"; then
+    if valid4 "${lan_network}" && valid4 "${default4_gateway}"; then
         ip -4 route add "${lan_network}" via "${default4_gateway}" dev "${default4_interface}"
         log_inf "[VPN] Routing IPv4 traffic for [${lan_network}][LAN] via interface [${default4_interface}]."
     fi
-    if valid6 "${lan_network}"; then
+    if valid6 "${lan_network}" && valid6 "${default6_gateway}"; then
         ip -6 route add "${lan_network}" via "${default6_gateway}" dev "${default6_interface}"
         log_inf "[VPN] Routing IPv6 traffic for [${lan_network}][LAN] via interface [${default6_interface}]."
     fi
