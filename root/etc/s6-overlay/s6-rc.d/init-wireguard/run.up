@@ -115,12 +115,10 @@ while IFS=$'\n' read -r interface; do
     networks=$(ip -j address show | jq -rc --arg interface "${interface}" '.[]|select((.ifname==$interface))|.addr_info[]')
     while IFS=$'\n' read -r network; do
         note="         "
-        family=$(jq -r '.family' <<< "${network}")
         local=$(jq -r '.local' <<< "${network}")
         prefixlen=$(jq -r '.prefixlen' <<< "${network}")
-        scope=$(jq -r '.scope' <<< "${network}")
         net="$(getnet "${local}/${prefixlen}")/${prefixlen}"
-        network_list+="${interface} ${local} ${net} ${family} ${scope},"
+        network_list+="${interface} ${local} ${net},"
         if [[ "${net}" == "$(get4net "${default4_gateway}/${prefixlen}")/${prefixlen}" ]]; then
             note="[default]"
             default4_address="${local}"
@@ -129,7 +127,7 @@ while IFS=$'\n' read -r interface; do
             note="[default]"
             default6_address="${local}"
         fi
-        log_inf "[VPN] Found network ${note}[${interface}][${family}][${local}][${net}][${scope}]."
+        log_inf "[VPN] Found network ${note}[${interface}][${local}][${net}]."
     done <<< "${networks}"
 done <<< "${interfaces}"
 
@@ -201,6 +199,10 @@ nft add chain inet hotio prerouting '{ type nat    hook prerouting priority -100
 
 ## INPUT RULES
 
+# Allow incoming ping
+#nft add rule inet hotio input icmp type echo-request limit rate 4/second counter accept
+#nft add rule inet hotio input icmpv6 type echo-request limit rate 4/second counter accept
+
 # Allow all incoming traffic from LAN if VPN_LAN_LEAK_ENABLED=true
 if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
     IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
@@ -226,21 +228,16 @@ for port in "${ports[@]}"; do
                 nft add rule inet hotio input iifname "${default6_interface}" "${port##*/}" dport "${port%/*}" ip6 saddr "${lan_network}" ip6 daddr "${default6_address}" counter accept
         done
     fi
-    # Block incoming traffic to port on WireGuard interface, if no redirect is configured
-    grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" || \
-        nft add rule inet hotio input iifname "${VPN_CONF}" "${port##*/}" dport "${port%/*}" counter drop
 done
 
 # Allow incoming traffic on local networks
 IFS=',' read -ra networks <<< "${network_list%,}"
 for network in "${networks[@]}"; do
     IFS=' ' read -ra part <<< "${network}"
-    if [[ ${part[3]} == "inet" ]]; then
+    valid4 "${part[1]}" && \
         nft add rule inet hotio input iifname "${part[0]}" ip saddr "${part[2]}" ip daddr "${part[1]}" counter accept
-    fi
-    if [[ ${part[3]} == "inet6" ]] && [[ ${part[4]} == "link" ]]; then
+    valid6 "${part[1]}" && \
         nft add rule inet hotio input iifname "${part[0]}" ip6 saddr "${part[2]}" ip6 daddr "${part[1]}" counter accept
-    fi
 done
 
 # Allow incoming traffic from vpn endpoint
@@ -249,13 +246,19 @@ valid4 "${vpn_endpoint_ip}" && valid4 "${default4_address}" && \
 valid6 "${vpn_endpoint_ip}" && valid6 "${default6_address}" && \
     nft add rule inet hotio input iifname "${default6_interface}" udp sport "${vpn_endpoint_port}" ip6 saddr "${vpn_endpoint_ip}" ip6 daddr "${default6_address}" counter accept
 
-# Allow incoming traffic from vpn, lo and ping
-nft add rule inet hotio input iifname "${VPN_CONF}" counter accept
+# Allow incoming traffic from vpn and lo
+nft add rule inet hotio input iifname "${VPN_CONF}" ct state established,related counter accept
 nft add rule inet hotio input iifname "lo" counter accept
-nft add rule inet hotio input icmp type echo-reply counter accept
-nft add rule inet hotio input icmpv6 type echo-reply counter accept
+
+# Allow incoming icmpv6 stuff
+valid6 "${vpn_endpoint_ip}" && \
+    nft add rule inet hotio input icmpv6 type '{ nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert }' counter accept
 
 ## OUTPUT RULES
+
+# Allow outgoing ping
+#nft add rule inet hotio output icmp type echo-request counter accept
+#nft add rule inet hotio output icmpv6 type echo-request counter accept
 
 # Allow all outgoing traffic to LAN if VPN_LAN_LEAK_ENABLED=true
 if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
@@ -282,21 +285,16 @@ for port in "${ports[@]}"; do
                 nft add rule inet hotio output oifname "${default6_interface}" "${port##*/}" sport "${port%/*}" ip6 saddr "${default6_address}" ip6 daddr "${lan_network}" counter accept
         done
     fi
-    # Block outgoing traffic from port on WireGuard interface, if no redirect is configured
-    grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" || \
-        nft add rule inet hotio output oifname "${VPN_CONF}" "${port##*/}" sport "${port%/*}" counter drop
 done
 
 # Allow outgoing traffic on local networks
 IFS=',' read -ra networks <<< "${network_list%,}"
 for network in "${networks[@]}"; do
     IFS=' ' read -ra part <<< "${network}"
-    if [[ ${part[3]} == "inet" ]]; then
+    valid4 "${part[1]}" && \
         nft add rule inet hotio output oifname "${part[0]}" ip saddr "${part[1]}" ip daddr "${part[2]}" counter accept
-    fi
-    if [[ ${part[3]} == "inet6" ]] && [[ ${part[4]} == "link" ]]; then
+    valid6 "${part[1]}" && \
         nft add rule inet hotio output oifname "${part[0]}" ip6 saddr "${part[1]}" ip6 daddr "${part[2]}" counter accept
-    fi
 done
 
 # Allow outgoing traffic to vpn endpoint
@@ -305,11 +303,13 @@ valid4 "${vpn_endpoint_ip}" && valid4 "${default4_address}" && \
 valid6 "${vpn_endpoint_ip}" && valid6 "${default6_address}" && \
     nft add rule inet hotio output oifname "${default6_interface}" udp dport "${vpn_endpoint_port}" ip6 saddr "${default6_address}" ip6 daddr "${vpn_endpoint_ip}" counter accept
 
-# Allow outgoing traffic to vpn, lo and ping
+# Allow outgoing traffic to vpn and lo
 nft add rule inet hotio output oifname "${VPN_CONF}" counter accept
 nft add rule inet hotio output oifname "lo" counter accept
-nft add rule inet hotio output icmp type echo-request counter accept
-nft add rule inet hotio output icmpv6 type echo-request counter accept
+
+# Allow outgoing icmpv6 stuff
+valid6 "${vpn_endpoint_ip}" && \
+    nft add rule inet hotio output icmpv6 type '{ nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert }' counter accept
 
 # List rules
 nft -s list table inet hotio
