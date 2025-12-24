@@ -14,8 +14,13 @@ fi
 IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
 for forward_port in "${forward_ports[@]}"; do
     forward_port="${forward_port// /}"
-    [[ ! ${forward_port} =~ "@" ]] && continue
     internal="${forward_port##*@}"
+    new_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${internal%/*} " <<< "$(nft --handle list chain inet hotio input)" | sed 's/.* # handle //g')
+    if [[ -z "${new_rule}" ]]; then
+        nft add rule inet hotio input iifname "${VPN_CONF}" "${internal##*/}" dport "${internal%/*}" counter accept
+        log_inf "[VPN] Exposed port [${internal%/*}/${internal##*/}] on interface [${VPN_CONF}]."
+    fi
+    [[ ! ${forward_port} =~ "@" ]] && continue
     new_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${forward_port%@*} redirect to :${internal##*/} " <<< "$(nft --handle list chain inet hotio prerouting)" | sed 's/.* # handle //g')
     if [[ -z "${new_rule}" ]] && [[ "${forward_port%@*}" != "${internal%/*}" ]]; then
         nft add rule inet hotio prerouting iifname "${VPN_CONF}" "${internal##*/}" dport "${forward_port%@*}" redirect to :"${internal%/*}"
@@ -39,8 +44,9 @@ while true; do
             IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
             for forward_port in "${forward_ports[@]}"; do
                 forward_port="${forward_port// /}"
-                [[ ${forward_port} =~ "@" ]] && continue
                 internal="${forward_port##*@}"
+                [[ ${forward_port} =~ "@" ]] && continue
+                port_is_redirected="true"
                 old_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${old_port} redirect to :${internal##*/} " <<< "$(nft --handle list chain inet hotio prerouting)" | sed 's/.* # handle //g')
                 if [[ -n "${old_rule}" ]]; then
                     nft delete rule inet hotio prerouting handle "${old_rule}"
@@ -51,6 +57,17 @@ while true; do
                     log_inf "[VPN] Redirected port [${port}/${internal##*/}] to [${internal%/*}/${internal##*/}] on interface [${VPN_CONF}]."
                 fi
             done
+            if [[ "${port_is_redirected}" != "true" ]]; then
+                old_rule=$(grep "iifname \"${VPN_CONF}\" meta l4proto { tcp, udp } th dport ${old_port} " <<< "$(nft --handle list chain inet hotio input)" | sed 's/.* # handle //g')
+                if [[ -n "${old_rule}" ]]; then
+                    nft delete rule inet hotio input handle "${old_rule}"
+                fi
+                new_rule=$(grep "iifname \"${VPN_CONF}\" meta l4proto { tcp, udp } th dport ${port} " <<< "$(nft --handle list chain inet hotio input)" | sed 's/.* # handle //g')
+                if [[ -z "${new_rule}" ]]; then
+                    nft add rule inet hotio input iifname "${VPN_CONF}" meta l4proto '{ tcp, udp }' th dport "${port}" counter accept
+                    log_inf "[VPN] Exposed port [${port}/tcp] and [${port}/udp] on interface [${VPN_CONF}]."
+                fi
+            fi
             # shellcheck source=/dev/null
             source "${APP_DIR}/forwarded_port_update_app"
             if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh" ]]; then
