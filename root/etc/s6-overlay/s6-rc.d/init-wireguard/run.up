@@ -73,7 +73,7 @@ for ip_address in ${ip_addresses//,/ }; do
         log_inf "[VPN] Added IPv6 address [${ip_address}] to interface [${VPN_CONF}]."
     fi
     if valid6 "${ip_address}" && [[ ${ipv6_available} != "true" ]]; then
-        log_wrn "[VPN] Failed adding IPv6 address [${ip_address}] to interface [${VPN_CONF}]. Try adding [--sysctl=\"net.ipv6.conf.all.disable_ipv6=0\"]."
+        log_wrn "[VPN] Failed adding IPv6 address [${ip_address}] to interface [${VPN_CONF}]."
     fi
 done
 ip_addresses=$(grep '^AllowedIPs' "/dev/shm/${VPN_CONF}-stripped.conf" | awk -F '=' '{print $2}' | xargs)
