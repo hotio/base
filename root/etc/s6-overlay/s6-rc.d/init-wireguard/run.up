@@ -63,6 +63,7 @@ for ip_address in ${ip_addresses//,/ }; do
     if valid4 "${ip_address}"; then
         ip_address=$(get4 "${ip_address}")
         ip -4 address add dev "${VPN_CONF}" "${ip_address}"
+        ipv4_wanted="true"
         log_inf "[VPN] Added IPv4 address [${ip_address}] to interface [${VPN_CONF}]."
     fi
     if valid6 "${ip_address}" && [[ ${ipv6_available} == "true" ]]; then
@@ -77,14 +78,19 @@ for ip_address in ${ip_addresses//,/ }; do
 done
 ip_addresses=$(grep '^AllowedIPs' "/dev/shm/${VPN_CONF}-stripped.conf" | awk -F '=' '{print $2}' | xargs)
 for ip_address in ${ip_addresses//,/ }; do
-    if valid4 "${ip_address}"; then
+    if valid4 "${ip_address}" && [[ ${ipv4_wanted} == "true" ]]; then
         allowed_ips+="${ip_address},"
+        ipv4_allowedips_found="true"
     fi
     if valid6 "${ip_address}" && [[ ${ipv6_wanted} == "true" ]]; then
         allowed_ips+="${ip_address},"
         ipv6_allowedips_found="true"
     fi
 done
+if [[ "${ipv4_wanted}" == "true" ]] && [[ "${ipv4_allowedips_found}" != "true" ]]; then
+    allowed_ips+="0.0.0.0/0,"
+    log_wrn "[VPN] IPv4 is wanted, but AllowedIPs for interface [${VPN_CONF}] has no IPv4 address configured. Added default [0.0.0.0/0]."
+fi
 if [[ "${ipv6_wanted}" == "true" ]] && [[ "${ipv6_allowedips_found}" != "true" ]]; then
     allowed_ips+="::/0,"
     log_wrn "[VPN] IPv6 is wanted, but AllowedIPs for interface [${VPN_CONF}] has no IPv6 address configured. Added default [::/0]."
@@ -96,57 +102,76 @@ wg setconf "${VPN_CONF}" "/dev/shm/${VPN_CONF}-stripped.conf"
 ip link set up dev "${VPN_CONF}"
 log_inf "[VPN] Interface [${VPN_CONF}] is online."
 
-default_route_json=$(ip -4 -j route show to default | jq -rc '.[]')
-default_interface=$(jq -r '.dev' <<< "${default_route_json}")
-default_gateway=$(jq -r '.gateway' <<< "${default_route_json}")
+default4_route_json=$(ip -4 -j route show to default | jq -rc '.[]')
+default4_interface=$(jq -r '.dev' <<< "${default4_route_json}")
+default4_gateway=$(jq -r '.gateway' <<< "${default4_route_json}")
 
-networks_json=$(ip -4 -j address show | jq -rc '.[]|select((.addr_info[].label|startswith("eth")) or (.addr_info[].label|startswith("enp")))|.addr_info[]')
-while IFS=$'\n' read -r network; do
-    note="         "
-    interface=$(jq -r '.label' <<< "${network}")
-    address=$(jq -r '.local' <<< "${network}")
-    prefixlen=$(jq -r '.prefixlen' <<< "${network}")
-    net="$(get4net "${address}/${prefixlen}")/${prefixlen}"
-    network_list+="${interface} ${address} ${net},"
-    if [[ "${interface}" == "${default_interface}" ]]; then
-        note="[default]"
-        default_address="${address}"
-    fi
-    log_inf "[VPN] Found network ${note}[${interface}][${address}][${net}]."
-done <<< "${networks_json}"
+default6_route_json=$(ip -6 -j route show to default | jq -rc '.[]')
+default6_interface=$(jq -r '.dev' <<< "${default6_route_json}")
+default6_gateway=$(jq -r '.gateway' <<< "${default6_route_json}")
 
-vpn_endpoint=$(wg show "${VPN_CONF}" | grep 'endpoint:' | awk -F ': ' '{print $2}')
+interfaces=$(ip -j address show | jq -rc '.[]|select((.ifname|startswith("eth")) or (.ifname|startswith("enp")))|.ifname')
+while IFS=$'\n' read -r interface; do
+    networks=$(ip -j address show | jq -rc --arg interface "${interface}" '.[]|select((.ifname==$interface))|.addr_info[]')
+    while IFS=$'\n' read -r network; do
+        note="         "
+        family=$(jq -r '.family' <<< "${network}")
+        local=$(jq -r '.local' <<< "${network}")
+        prefixlen=$(jq -r '.prefixlen' <<< "${network}")
+        scope=$(jq -r '.scope' <<< "${network}")
+        net="$(getnet "${local}/${prefixlen}")/${prefixlen}"
+        network_list+="${interface} ${local} ${net} ${family} ${scope},"
+        if [[ "${net}" == "$(get4net "${default4_gateway}/${prefixlen}")/${prefixlen}" ]]; then
+            note="[default]"
+            default4_address="${local}"
+        fi
+        if [[ "${net}" == "$(get6net "${default6_gateway}/${prefixlen}")/${prefixlen}" ]]; then
+            note="[default]"
+            default6_address="${local}"
+        fi
+        log_inf "[VPN] Found network ${note}[${interface}][${family}][${local}][${net}][${scope}]."
+    done <<< "${networks}"
+done <<< "${interfaces}"
+
+vpn_endpoint=$(wg show "${VPN_CONF}" | grep 'endpoint:' | awk -F ': ' '{print $2}' | sed -e 's#\[##' -e 's#\]##')
 vpn_endpoint_ip="${vpn_endpoint%:*}"
 vpn_endpoint_port="${vpn_endpoint##*:}"
 if valid4 "${vpn_endpoint_ip}"; then
-    ip -4 route add "${vpn_endpoint_ip}" via "${default_gateway}" dev "${default_interface}" table "${vpn_endpoint_port}"
+    ip -4 route add "${vpn_endpoint_ip}" via "${default4_gateway}" dev "${default4_interface}" table "${vpn_endpoint_port}"
     ip -4 rule add ipproto udp dport "${vpn_endpoint_port}" to "${vpn_endpoint_ip}" table "${vpn_endpoint_port}" iif lo
     ip -4 rule add ipproto udp sport "${vpn_endpoint_port}" from "${vpn_endpoint_ip}" table "${vpn_endpoint_port}"
-    log_inf "[VPN] Routing traffic for [${vpn_endpoint_ip}][${vpn_endpoint_port}][ENDPOINT] via interface [${default_interface}]."
-else
-    log_err "[VPN] Failed adding route for [${vpn_endpoint_ip}][${vpn_endpoint_port}][ENDPOINT], only IPv4 supported! Exiting..."
-    exit 1
+    log_inf "[VPN] Routing IPv4 traffic for [${vpn_endpoint_ip}][${vpn_endpoint_port}][ENDPOINT] via interface [${default4_interface}]."
+fi
+if valid6 "${vpn_endpoint_ip}"; then
+    ip -6 route add "${vpn_endpoint_ip}" via "${default6_gateway}" dev "${default6_interface}" table "${vpn_endpoint_port}"
+    ip -6 rule add ipproto udp dport "${vpn_endpoint_port}" to "${vpn_endpoint_ip}" table "${vpn_endpoint_port}" iif lo
+    ip -6 rule add ipproto udp sport "${vpn_endpoint_port}" from "${vpn_endpoint_ip}" table "${vpn_endpoint_port}"
+    log_inf "[VPN] Routing IPv6 traffic for [${vpn_endpoint_ip}][${vpn_endpoint_port}][ENDPOINT] via interface [${default6_interface}]."
 fi
 
 IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
 for lan_network in "${lan_networks[@]}"; do
     lan_network="${lan_network// /}"
     if valid4 "${lan_network}"; then
-        ip -4 route add "${lan_network}" via "${default_gateway}" dev "${default_interface}"
-        log_inf "[VPN] Routing traffic for [${lan_network}][LAN] via interface [${default_interface}]."
-    else
-        log_err "[VPN] Failed adding route for [${lan_network}][LAN], only IPv4 supported! Exiting..."
-        exit 1
+        ip -4 route add "${lan_network}" via "${default4_gateway}" dev "${default4_interface}"
+        log_inf "[VPN] Routing IPv4 traffic for [${lan_network}][LAN] via interface [${default4_interface}]."
+    fi
+    if valid6 "${lan_network}"; then
+        ip -6 route add "${lan_network}" via "${default6_gateway}" dev "${default6_interface}"
+        log_inf "[VPN] Routing IPv6 traffic for [${lan_network}][LAN] via interface [${default6_interface}]."
     fi
 done
 
-ip -4 route del default > /dev/null 2>&1
-ip -4 route add default dev "${VPN_CONF}"
-if [[ ${ipv6_wanted} == "true" ]]; then
+if valid4 "${default4_gateway}" || [[ "${ipv4_wanted}" == "true" ]]; then
+    ip -4 route del default > /dev/null 2>&1 || true
+    ip -4 route add default dev "${VPN_CONF}"
+    log_inf "[VPN] Routing all other IPv4 traffic via interface [${VPN_CONF}]."
+fi
+if valid6 "${default6_gateway}" || [[ "${ipv6_wanted}" == "true" ]]; then
     ip -6 route del default > /dev/null 2>&1 || true
     ip -6 route add default dev "${VPN_CONF}"
+    log_inf "[VPN] Routing all other IPv6 traffic via interface [${VPN_CONF}]."
 fi
-log_inf "[VPN] Routing all other traffic via interface [${VPN_CONF}]."
 
 log_inf "[VPN] Firewall rules:"
 
@@ -166,63 +191,113 @@ nft add chain inet hotio input      '{ type filter hook input      priority 0 ; 
 nft add chain inet hotio output     '{ type filter hook output     priority 0 ; policy drop; }'
 nft add chain inet hotio prerouting '{ type nat    hook prerouting priority -100 ; }'
 
-# Create input rules
+## INPUT RULES
+
+# Allow all incoming traffic from LAN if VPN_LAN_LEAK_ENABLED=true
 if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
     IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
     for lan_network in "${lan_networks[@]}"; do
         lan_network="${lan_network// /}"
-        valid4 "${lan_network}" && nft add rule inet hotio input iifname "${default_interface}" ip saddr "${lan_network}" ip daddr "${default_address}" counter accept
+        valid4 "${lan_network}" && valid4 "${default4_address}" && \
+            nft add rule inet hotio input iifname "${default4_interface}" ip saddr "${lan_network}" ip daddr "${default4_address}" counter accept
+        valid6 "${lan_network}" && valid6 "${default6_address}" && \
+            nft add rule inet hotio input iifname "${default6_interface}" ip6 saddr "${lan_network}" ip6 daddr "${default6_address}" counter accept
     done
 fi
+
+# Allow incoming traffic from LAN to port
 IFS=',' read -ra ports <<< "${exposed_ports%,}"
 for port in "${ports[@]}"; do
     if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
         IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
         for lan_network in "${lan_networks[@]}"; do
             lan_network="${lan_network// /}"
-            valid4 "${lan_network}" && nft add rule inet hotio input iifname "${default_interface}" "${port##*/}" dport "${port%/*}" ip saddr "${lan_network}" ip daddr "${default_address}" counter accept
+            valid4 "${lan_network}" && valid4 "${default4_address}" && \
+                nft add rule inet hotio input iifname "${default4_interface}" "${port##*/}" dport "${port%/*}" ip saddr "${lan_network}" ip daddr "${default4_address}" counter accept
+            valid6 "${lan_network}" && valid6 "${default6_address}" && \
+                nft add rule inet hotio input iifname "${default6_interface}" "${port##*/}" dport "${port%/*}" ip6 saddr "${lan_network}" ip6 daddr "${default6_address}" counter accept
         done
     fi
-    grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" && continue
-    nft add rule inet hotio input iifname "${VPN_CONF}" "${port##*/}" dport "${port%/*}" counter drop
+    # Block incoming traffic to port on WireGuard interface, if no redirect is configured
+    grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" || \
+        nft add rule inet hotio input iifname "${VPN_CONF}" "${port##*/}" dport "${port%/*}" counter drop
 done
+
+# Allow incoming traffic on local networks
 IFS=',' read -ra networks <<< "${network_list%,}"
 for network in "${networks[@]}"; do
     IFS=' ' read -ra part <<< "${network}"
-    nft add rule inet hotio input iifname "${part[0]}" ip saddr "${part[2]}" ip daddr "${part[1]}" counter accept
+    if [[ ${part[3]} == "inet" ]]; then
+        nft add rule inet hotio input iifname "${part[0]}" ip saddr "${part[2]}" ip daddr "${part[1]}" counter accept
+    fi
+    if [[ ${part[3]} == "inet6" ]] && [[ ${part[4]} == "link" ]]; then
+        nft add rule inet hotio input iifname "${part[0]}" ip6 saddr "${part[2]}" ip6 daddr "${part[1]}" counter accept
+    fi
 done
-valid4 "${vpn_endpoint_ip}" && nft add rule inet hotio input iifname "${default_interface}" udp sport "${vpn_endpoint_port}" ip saddr "${vpn_endpoint_ip}" ip daddr "${default_address}" counter accept
+
+# Allow incoming traffic from vpn endpoint
+valid4 "${vpn_endpoint_ip}" && valid4 "${default4_address}" && \
+    nft add rule inet hotio input iifname "${default4_interface}" udp sport "${vpn_endpoint_port}" ip saddr "${vpn_endpoint_ip}" ip daddr "${default4_address}" counter accept
+valid6 "${vpn_endpoint_ip}" && valid6 "${default6_address}" && \
+    nft add rule inet hotio input iifname "${default6_interface}" udp sport "${vpn_endpoint_port}" ip6 saddr "${vpn_endpoint_ip}" ip6 daddr "${default6_address}" counter accept
+
+# Allow incoming traffic from vpn, lo and ping
 nft add rule inet hotio input iifname "${VPN_CONF}" counter accept
 nft add rule inet hotio input iifname "lo" counter accept
 nft add rule inet hotio input icmp type echo-reply counter accept
 nft add rule inet hotio input icmpv6 type echo-reply counter accept
 
-# Create output rules
+## OUTPUT RULES
+
+# Allow all outgoing traffic to LAN if VPN_LAN_LEAK_ENABLED=true
 if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
     IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
     for lan_network in "${lan_networks[@]}"; do
         lan_network="${lan_network// /}"
-        valid4 "${lan_network}" && nft add rule inet hotio output oifname "${default_interface}" ip saddr "${default_address}" ip daddr "${lan_network}" counter accept
+        valid4 "${lan_network}" && valid4 "${default4_address}" && \
+            nft add rule inet hotio output oifname "${default4_interface}" ip saddr "${default4_address}" ip daddr "${lan_network}" counter accept
+        valid6 "${lan_network}" && valid6 "${default6_address}" && \
+            nft add rule inet hotio output oifname "${default6_interface}" ip6 saddr "${default6_address}" ip6 daddr "${lan_network}" counter accept
     done
 fi
+
+# Allow outgoing traffic to LAN from port
 IFS=',' read -ra ports <<< "${exposed_ports%,}"
 for port in "${ports[@]}"; do
     if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
         IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
         for lan_network in "${lan_networks[@]}"; do
             lan_network="${lan_network// /}"
-            valid4 "${lan_network}" && nft add rule inet hotio output oifname "${default_interface}" "${port##*/}" sport "${port%/*}" ip saddr "${default_address}" ip daddr "${lan_network}" counter accept
+            valid4 "${lan_network}" && valid4 "${default4_address}" && \
+                nft add rule inet hotio output oifname "${default4_interface}" "${port##*/}" sport "${port%/*}" ip saddr "${default4_address}" ip daddr "${lan_network}" counter accept
+            valid6 "${lan_network}" && valid6 "${default6_address}" && \
+                nft add rule inet hotio output oifname "${default6_interface}" "${port##*/}" sport "${port%/*}" ip6 saddr "${default6_address}" ip6 daddr "${lan_network}" counter accept
         done
     fi
-    grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" && continue
-    nft add rule inet hotio output oifname "${VPN_CONF}" "${port##*/}" sport "${port%/*}" counter drop
+    # Block outgoing traffic from port on WireGuard interface, if no redirect is configured
+    grep -q "${port}" <<< "${VPN_PORT_REDIRECTS}" || \
+        nft add rule inet hotio output oifname "${VPN_CONF}" "${port##*/}" sport "${port%/*}" counter drop
 done
+
+# Allow outgoing traffic on local networks
 IFS=',' read -ra networks <<< "${network_list%,}"
 for network in "${networks[@]}"; do
     IFS=' ' read -ra part <<< "${network}"
-    nft add rule inet hotio output oifname "${part[0]}" ip saddr "${part[1]}" ip daddr "${part[2]}" counter accept
+    if [[ ${part[3]} == "inet" ]]; then
+        nft add rule inet hotio output oifname "${part[0]}" ip saddr "${part[1]}" ip daddr "${part[2]}" counter accept
+    fi
+    if [[ ${part[3]} == "inet6" ]] && [[ ${part[4]} == "link" ]]; then
+        nft add rule inet hotio output oifname "${part[0]}" ip6 saddr "${part[1]}" ip6 daddr "${part[2]}" counter accept
+    fi
 done
-valid4 "${vpn_endpoint_ip}" && nft add rule inet hotio output oifname "${default_interface}" udp dport "${vpn_endpoint_port}" ip saddr "${default_address}" ip daddr "${vpn_endpoint_ip}" counter accept
+
+# Allow outgoing traffic to vpn endpoint
+valid4 "${vpn_endpoint_ip}" && valid4 "${default4_address}" && \
+    nft add rule inet hotio output oifname "${default4_interface}" udp dport "${vpn_endpoint_port}" ip saddr "${default4_address}" ip daddr "${vpn_endpoint_ip}" counter accept
+valid6 "${vpn_endpoint_ip}" && valid6 "${default6_address}" && \
+    nft add rule inet hotio output oifname "${default6_interface}" udp dport "${vpn_endpoint_port}" ip6 saddr "${default6_address}" ip6 daddr "${vpn_endpoint_ip}" counter accept
+
+# Allow outgoing traffic to vpn, lo and ping
 nft add rule inet hotio output oifname "${VPN_CONF}" counter accept
 nft add rule inet hotio output oifname "lo" counter accept
 nft add rule inet hotio output icmp type echo-request counter accept
