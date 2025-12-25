@@ -62,7 +62,7 @@ for forward_port in "${forward_ports[@]}"; do
 done
 
 re='^[0-9]+$'
-if [[ "${VPN_AUTO_PORT_FORWARD}" =~ $re ]] ; then
+if [[ "${VPN_AUTO_PORT_FORWARD}" =~ $re ]]; then
     echo "${VPN_AUTO_PORT_FORWARD}" > "${CONFIG_DIR}/wireguard/forwarded_port"
 fi
 
@@ -72,7 +72,7 @@ old_port="0"
 while true; do
     if [[ -f "${CONFIG_DIR}/wireguard/forwarded_port" ]] && [[ "${VPN_AUTO_PORT_FORWARD}" != "false" ]]; then
         port=$(sed -n '1p' "${CONFIG_DIR}/wireguard/forwarded_port")
-        if [[ "${old_port}" != "${port}" ]]; then
+        if [[ "${old_port}" != "${port}" ]] && [[ "${port}" =~ $re ]]; then
             log_inf "[VPN] Forwarded port is [${port}]."
             IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
             for forward_port in "${forward_ports[@]}"; do
