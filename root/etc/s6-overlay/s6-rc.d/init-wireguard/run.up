@@ -179,8 +179,6 @@ if valid6 "${default6_gateway}" || [[ "${ipv6_wanted}" == "true" ]]; then
     log_inf "[VPN] Routing all other IPv6 traffic via interface [${VPN_CONF}]."
 fi
 
-log_inf "[VPN] Firewall rules:"
-
 IFS=',' read -ra ports <<< "${WEBUI_PORTS%,}"
 for port in "${ports[@]}"; do
     exposed_ports+="${port// /},"
@@ -311,7 +309,20 @@ nft add rule inet hotio output oifname "lo" counter accept
 valid6 "${vpn_endpoint_ip}" && \
     nft add rule inet hotio output icmpv6 type '{ nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert }' counter accept
 
+## REDIRECTS and EXPOSED PORTS
+
+IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
+for forward_port in "${forward_ports[@]}"; do
+    forward_port="${forward_port// /}"
+    internal="${forward_port##*@}"
+    if [[ ${forward_port} =~ "@" ]]; then
+        add_rule_redirect_port "${forward_port%@*}" "${internal}"
+        add_rule_expose_port "${internal}"
+    fi
+done
+
 # List rules
+log_inf "[VPN] Firewall rules:"
 nft -s list table inet hotio
 
 set +e
