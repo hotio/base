@@ -27,10 +27,12 @@ del_rule_expose_port() {
 add_rule_redirect_port() {
     forward_port="${1}"
     internal="${2}"
-    new_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${forward_port} redirect to :${internal##*/} " <<< "$(nft --handle list chain inet hotio prerouting)" | sed 's/.* # handle //g')
-    if [[ -z "${new_rule}" ]]; then
-        nft add rule inet hotio prerouting iifname "${VPN_CONF}" "${internal##*/}" dport "${forward_port}" redirect to :"${internal%/*}"
-        log_inf "[VPN] Redirected port [${forward_port}/${internal##*/}] to [${internal%/*}/${internal##*/}] on interface [${VPN_CONF}]."
+    if [[ "${forward_port}" != "${internal%/*}" ]]; then
+        new_rule=$(grep "iifname \"${VPN_CONF}\" ${internal##*/} dport ${forward_port} redirect to :${internal##*/} " <<< "$(nft --handle list chain inet hotio prerouting)" | sed 's/.* # handle //g')
+        if [[ -z "${new_rule}" ]]; then
+            nft add rule inet hotio prerouting iifname "${VPN_CONF}" "${internal##*/}" dport "${forward_port}" redirect to :"${internal%/*}"
+            log_inf "[VPN] Redirected port [${forward_port}/${internal##*/}] to [${internal%/*}/${internal##*/}] on interface [${VPN_CONF}]."
+        fi
     fi
 }
 
@@ -53,9 +55,9 @@ IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
 for forward_port in "${forward_ports[@]}"; do
     forward_port="${forward_port// /}"
     internal="${forward_port##*@}"
-    add_rule_expose_port "${internal}"
-    if [[ ${forward_port} =~ "@" ]] && [[ "${forward_port%@*}" != "${internal%/*}" ]]; then
+    if [[ ${forward_port} =~ "@" ]]; then
         add_rule_redirect_port "${forward_port%@*}" "${internal}"
+        add_rule_expose_port "${internal}"
     fi
 done
 
@@ -79,8 +81,8 @@ while true; do
                 if [[ ! ${forward_port} =~ "@" ]]; then
                     port_is_redirected="true"
                     del_rule_redirect_port "${old_port}" "${internal}"
-                    [[ "${port}" != "${internal%/*}" ]] && \
-                        add_rule_redirect_port "${port}" "${internal}"
+                    add_rule_redirect_port "${port}" "${internal}"
+                    add_rule_expose_port "${internal}"
                 fi
             done
             if [[ "${port_is_redirected}" != "true" ]]; then
