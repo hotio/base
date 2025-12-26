@@ -116,9 +116,10 @@ default6_route_json=$(ip -6 -j route show to default | jq -rc '.[]')
 default6_interface=$(jq -r '.dev' <<< "${default6_route_json}")
 default6_gateway=$(jq -r '.gateway' <<< "${default6_route_json}")
 
-interfaces=$(ip -j address show | jq -rc '.[]|select((.ifname|startswith("eth")) or (.ifname|startswith("enp")))|.ifname')
+ip_addr_json=$(ip -j address show)
+interfaces=$(jq -rc '.[]|select((.ifname|startswith("eth")) or (.ifname|startswith("enp")))|.ifname' <<< "${ip_addr_json}")
 while IFS=$'\n' read -r interface; do
-    networks=$(ip -j address show | jq -rc --arg interface "${interface}" '.[]|select((.ifname==$interface))|.addr_info[]')
+    networks=$(jq -rc --arg interface "${interface}" '.[]|select((.ifname==$interface))|.addr_info[]' <<< "${ip_addr_json}")
     while IFS=$'\n' read -r network; do
         note="         "
         local=$(jq -r '.local' <<< "${network}")
