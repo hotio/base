@@ -42,22 +42,25 @@ fi
 if [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
     log_err "[VPN] Configuration file [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf] was not found! Exiting..."
     exit 1
-else
-    dos2unix -q -n "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" "/dev/shm/${VPN_CONF}.conf"
-    chmod 600 "/dev/shm/${VPN_CONF}.conf"
-    wg-quick strip "/dev/shm/${VPN_CONF}.conf" > "/dev/shm/${VPN_CONF}-stripped.conf"
 fi
 
 set -e
 
 log_inf "[VPN] Creating interface [${VPN_CONF}]."
+
+dos2unix -q -n "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" "/dev/shm/${VPN_CONF}.conf"
+chmod 600 "/dev/shm/${VPN_CONF}.conf"
+wg-quick strip "/dev/shm/${VPN_CONF}.conf" > "/dev/shm/${VPN_CONF}-stripped.conf"
+
 ip link add dev "${VPN_CONF}" type wireguard
+
 if [[ "$(cat "/proc/sys/net/ipv6/conf/${VPN_CONF}/disable_ipv6")" == "0" ]]; then
     ipv6_available="true"
     log_inf "[VPN] IPv6 support is available on interface [${VPN_CONF}]."
 else
     log_inf "[VPN] IPv6 support is not available on interface [${VPN_CONF}]."
 fi
+
 ip_addresses=$(grep '^Address' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
 for ip_address in ${ip_addresses//,/ }; do
     if valid4 "${ip_address}"; then
@@ -76,6 +79,7 @@ for ip_address in ${ip_addresses//,/ }; do
         log_wrn "[VPN] Failed adding IPv6 address [${ip_address}] to interface [${VPN_CONF}]."
     fi
 done
+
 ip_addresses=$(grep '^AllowedIPs' "/dev/shm/${VPN_CONF}-stripped.conf" | awk -F '=' '{print $2}' | xargs)
 for ip_address in ${ip_addresses//,/ }; do
     if valid4 "${ip_address}" && [[ ${ipv4_wanted} == "true" ]]; then
@@ -87,6 +91,7 @@ for ip_address in ${ip_addresses//,/ }; do
         ipv6_allowedips_found="true"
     fi
 done
+
 if [[ "${ipv4_wanted}" == "true" ]] && [[ "${ipv4_allowedips_found}" != "true" ]]; then
     allowed_ips+="0.0.0.0/0,"
     log_wrn "[VPN] IPv4 is wanted, but AllowedIPs for interface [${VPN_CONF}] has no IPv4 address configured. Added default [0.0.0.0/0]."
@@ -95,6 +100,7 @@ if [[ "${ipv6_wanted}" == "true" ]] && [[ "${ipv6_allowedips_found}" != "true" ]
     allowed_ips+="::/0,"
     log_wrn "[VPN] IPv6 is wanted, but AllowedIPs for interface [${VPN_CONF}] has no IPv6 address configured. Added default [::/0]."
 fi
+
 sed -i "s#^AllowedIPs.*#AllowedIPs = ${allowed_ips%,}#" "/dev/shm/${VPN_CONF}-stripped.conf"
 log_inf "[VPN] AllowedIPs are [${allowed_ips%,}] for interface [${VPN_CONF}]."
 
@@ -157,7 +163,7 @@ fi
 
 IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
 for lan_network in "${lan_networks[@]}"; do
-    lan_network="${lan_network// /}"
+    lan_network="${lan_network//[[:space:]]/}"
     if valid4 "${lan_network}" && valid4 "${default4_gateway}"; then
         ip -4 route add "${lan_network}" via "${default4_gateway}" dev "${default4_interface}"
         log_inf "[VPN] Routing IPv4 traffic for [${lan_network}][LAN] via interface [${default4_interface}]."
@@ -181,11 +187,11 @@ fi
 
 IFS=',' read -ra ports <<< "${WEBUI_PORTS%,}"
 for port in "${ports[@]}"; do
-    exposed_ports+="${port// /},"
+    exposed_ports+="${port//[[:space:]]/},"
 done
 IFS=',' read -ra ports <<< "${VPN_EXPOSE_PORTS_ON_LAN%,}"
 for port in "${ports[@]}"; do
-    exposed_ports+="${port// /},"
+    exposed_ports+="${port//[[:space:]]/},"
 done
 
 # Create table and chains
@@ -205,7 +211,7 @@ nft add chain inet hotio prerouting '{ type nat    hook prerouting priority -100
 if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
     IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
     for lan_network in "${lan_networks[@]}"; do
-        lan_network="${lan_network// /}"
+        lan_network="${lan_network//[[:space:]]/}"
         valid4 "${lan_network}" && valid4 "${default4_address}" && \
             nft add rule inet hotio input iifname "${default4_interface}" ip saddr "${lan_network}" ip daddr "${default4_address}" counter accept
         valid6 "${lan_network}" && valid6 "${default6_address}" && \
@@ -219,7 +225,7 @@ for port in "${ports[@]}"; do
     if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
         IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
         for lan_network in "${lan_networks[@]}"; do
-            lan_network="${lan_network// /}"
+            lan_network="${lan_network//[[:space:]]/}"
             valid4 "${lan_network}" && valid4 "${default4_address}" && \
                 nft add rule inet hotio input iifname "${default4_interface}" "${port##*/}" dport "${port%/*}" ip saddr "${lan_network}" ip daddr "${default4_address}" counter accept
             valid6 "${lan_network}" && valid6 "${default6_address}" && \
@@ -262,7 +268,7 @@ valid6 "${vpn_endpoint_ip}" && \
 if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
     IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
     for lan_network in "${lan_networks[@]}"; do
-        lan_network="${lan_network// /}"
+        lan_network="${lan_network//[[:space:]]/}"
         valid4 "${lan_network}" && valid4 "${default4_address}" && \
             nft add rule inet hotio output oifname "${default4_interface}" ip saddr "${default4_address}" ip daddr "${lan_network}" counter accept
         valid6 "${lan_network}" && valid6 "${default6_address}" && \
@@ -276,7 +282,7 @@ for port in "${ports[@]}"; do
     if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
         IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
         for lan_network in "${lan_networks[@]}"; do
-            lan_network="${lan_network// /}"
+            lan_network="${lan_network//[[:space:]]/}"
             valid4 "${lan_network}" && valid4 "${default4_address}" && \
                 nft add rule inet hotio output oifname "${default4_interface}" "${port##*/}" sport "${port%/*}" ip saddr "${default4_address}" ip daddr "${lan_network}" counter accept
             valid6 "${lan_network}" && valid6 "${default6_address}" && \
@@ -313,12 +319,12 @@ valid6 "${vpn_endpoint_ip}" && \
 
 IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
 for forward_port in "${forward_ports[@]}"; do
-    forward_port="${forward_port// /}"
-    internal="${forward_port##*@}"
-    if [[ ${forward_port} =~ "@" ]]; then
-        add_rule_redirect_port "${forward_port%@*}" "${internal}"
-        add_rule_expose_port "${internal}"
-    fi
+    [[ ! ${forward_port} == *@* ]] && continue
+    forward_port="${forward_port//[[:space:]]/}"
+    external="${forward_port%@*}"
+    internal="${forward_port#*@}"
+    add_rule_redirect_port "${external}" "${internal}"
+    add_rule_expose_port "${internal}"
 done
 
 # List rules
