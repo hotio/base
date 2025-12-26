@@ -31,14 +31,13 @@ while true; do
             log_inf "[FORWARDER] Forwarded port is [${port}]."
             IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
             for forward_port in "${forward_ports[@]}"; do
-                forward_port="${forward_port// /}"
-                internal="${forward_port##*@}"
-                if [[ ! ${forward_port} =~ "@" ]]; then
-                    port_is_redirected="true"
-                    del_rule_redirect_port "${old_port}" "${internal}"
-                    add_rule_redirect_port "${port}" "${internal}"
-                    add_rule_expose_port "${internal}"
-                fi
+                [[ ${forward_port} == *@* ]] && continue
+                port_is_redirected="true"
+                forward_port="${forward_port//[[:space:]]/}"
+                internal="${forward_port#*@}"
+                del_rule_redirect_port "${old_port}" "${internal}"
+                add_rule_redirect_port "${port}" "${internal}"
+                add_rule_expose_port "${internal}"
             done
             if [[ "${port_is_redirected}" != "true" ]]; then
                 del_rule_expose_port "${old_port}/tcp"
