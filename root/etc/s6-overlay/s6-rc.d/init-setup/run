@@ -9,21 +9,20 @@ set -e
 umask "${UMASK}"
 
 #IMAGE_STATS=ewogICJhcHAiOiAicWJpdHRvcnJlbnQiLAogICJpbWFnZSI6ICJob3Rpby9xYml0dG9ycmVudDpyZWxlYXNlIiwKICAicmV2aXNpb24iOiAiMzcwYjNhNiIsCiAgInZlcnNpb24iOiAiNC42LjMiCn0K
-image=$(jq -r '.image' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
-branch=$(awk -F ':' '{print $2}' <<< "${image}")
-repo=$(awk -F ':' '{print $1}' <<< "${image}")
-revision=$(jq -r '.revision' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
-latest_revision=$(curl -fsL --max-time 10 "https://raw.githubusercontent.com/${repo}/master/tags.json" | jq -r '.'"${branch}"'.tags[2]' 2> /dev/null | awk -F '-' '{print $2}')
-revision_status=$(curl -fsL --max-time 10 "https://api.github.com/repos/${repo}/compare/${latest_revision}...${revision}" | jq -r 'if (.behind_by | length) != 0 then "(\(.status), by \(.behind_by))" else empty end')
+IMAGE_STATS=$(base64 --decode <<< "${IMAGE_STATS}")
+image=$(jq -r '.image' <<< "${IMAGE_STATS}")
+revision=$(jq -r '.revision' <<< "${IMAGE_STATS}")
+version=$(jq -r '.version' <<< "${IMAGE_STATS}")
+app_uri=$(jq -r 'if .app != "" then "/containers/\(.app)" else empty end' <<< "${IMAGE_STATS}")
 
 echo -ne "
 $(figlet "hotio")
 Donate:        https://hotio.dev/donate
-Documentation: https://hotio.dev$(jq -r 'if .app != "" then "/containers/\(.app)" else empty end' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
+Documentation: https://hotio.dev${app_uri}
 Support:       https://hotio.dev/discord
 Image:         ${image}
-Revision:      ${revision} ${revision_status}
-Version:       $(jq -r '.version' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")
+Revision:      ${revision}
+Version:       ${version}
 OS:            $(uname -s) $(uname -r) $(uname -m)
 
 ----------------------------------------------------------------------
