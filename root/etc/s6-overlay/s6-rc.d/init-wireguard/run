@@ -134,6 +134,13 @@ while IFS=$'\n' read -r interface; do
             default6_address="${local}"
         fi
         log_inf "[VPN] Found network ${note}[${interface}][${local}][${net}]."
+        networks=$(jq -rc --arg interface "${VPN_CONF}" '.[]|select((.ifname==$interface))|.addr_info[]' <<< "${ip_addr_json}")
+        while IFS=$'\n' read -r network; do
+            wg_local=$(jq -r '.local' <<< "${network}")
+            wg_net=$(getnet "${wg_local}/${prefixlen}" || true)
+            [[ "$(getnet "${local}/${prefixlen}" || true)" == "${wg_net}" ]] && [[ -n "${wg_net}" ]] && \
+                log_err "[VPN] Network [${interface}][${local}][${net}] conflicts with address [${wg_local}] on interface [${VPN_CONF}]." && exit 1
+        done <<< "${networks}"
     done <<< "${networks}"
 done <<< "${interfaces}"
 
@@ -164,18 +171,13 @@ fi
 IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
 for lan_network in "${lan_networks[@]}"; do
     lan_network="${lan_network//[[:space:]]/}"
-    lan_net=$(getnet "${lan_network}" || true)
-    lan_prefix=$(getprefix "${lan_network}" || true)
-    network_list_wg=""
     networks=$(jq -rc --arg interface "${VPN_CONF}" '.[]|select((.ifname==$interface))|.addr_info[]' <<< "${ip_addr_json}")
     while IFS=$'\n' read -r network; do
-        local=$(jq -r '.local' <<< "${network}")
-        net=$(getnet "${local}/${lan_prefix}" || true)
-        network_list_wg+="${net},"
-        [[ "${lan_net}" == "${net}" ]] && [[ -n "${net}" ]] && \
-            log_wrn "[VPN] Could not add route for [${lan_network}][LAN] due to conflict with address [${local}] on interface [${VPN_CONF}]." && break
+        wg_local=$(jq -r '.local' <<< "${network}")
+        wg_net=$(getnet "${wg_local}/$(getprefix "${lan_network}" || true)" || true)
+        [[ "$(getnet "${lan_network}" || true)" == "${wg_net}" ]] && [[ -n "${net}" ]] && \
+            log_err "[VPN] Route for [${lan_network}][LAN] conflicts with address [${wg_local}] on interface [${VPN_CONF}]." && exit 1
     done <<< "${networks}"
-    grep -q "${lan_net}" <<< "${network_list_wg}" && continue
     if valid4 "${lan_network}" && valid4 "${default4_gateway}"; then
         ip -4 route add "${lan_network}" via "${default4_gateway}" dev "${default4_interface}"
         log_inf "[VPN] Routing IPv4 traffic for [${lan_network}][LAN] via interface [${default4_interface}]."
