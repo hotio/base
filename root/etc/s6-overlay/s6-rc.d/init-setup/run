@@ -62,8 +62,27 @@ usermod -d "/tmp/temphome" hotio > /dev/null
 usermod -o -u "${PUID}" hotio > /dev/null
 usermod -d "${CONFIG_DIR}" hotio > /dev/null
 rm -rf "/tmp/temphome"
+
 log_inf "Executing groupmod..."
 groupmod -o -g "${PGID}" hotio > /dev/null
+
+log_inf "Looking for hardware devices..."
+DEVICES=$(find /dev/dri /dev/dvb -type c -print 2>/dev/null || true)
+for i in ${DEVICES}; do
+    # Get the group ID and NAME (if exists) for the current device in the list
+    DEVICE_GROUP_ID=$(stat -c '%g' "$i")
+    DEVICE_GROUP_NAME=$(getent group "${DEVICE_GROUP_ID}" | awk -F: '{print $1}')
+
+    # If group NAME doesn't exist, create it and assign it the group ID
+    if [[ -z "${DEVICE_GROUP_NAME}" ]]; then
+        DEVICE_GROUP_NAME="video${RANDOM}"
+        groupadd -g "${DEVICE_GROUP_ID}" "${DEVICE_GROUP_NAME}"
+    fi
+
+    # If the user hotio isn't a member of the group, add him
+    getent group "${DEVICE_GROUP_NAME}" | grep -q hotio || usermod -a -G "${DEVICE_GROUP_NAME}" hotio
+    log_inf "Added support for device [${i}]."
+done
 
 log_inf "Taking ownership of [${CONFIG_DIR}]."
 find "${CONFIG_DIR}" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
