@@ -2,12 +2,12 @@
 # shellcheck shell=bash
 
 # shellcheck source=/dev/null
-source /etc/s6-overlay/scripts/general-functions
+source /etc/s6-overlay/scripts/bash-functions
 
 umask "${UMASK}"
 
 if [[ ! -f "${CONFIG_DIR}/privoxy/privoxy.conf" ]]; then
-    log_inf "[PRIVOXY] Installing default \"privoxy.conf\"..."
+    log_inf "[PRIVOXY] Installing default configuration file..."
     mkdir -p "${CONFIG_DIR}/privoxy"
     cp "${APP_DIR}/privoxy.conf" "${CONFIG_DIR}/privoxy/privoxy.conf"
     find "${CONFIG_DIR}/privoxy" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +

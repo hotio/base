@@ -2,8 +2,9 @@
 # shellcheck shell=bash
 
 # shellcheck source=/dev/null
-source /etc/s6-overlay/scripts/general-functions
-source /etc/s6-overlay/scripts/pia-functions
+source /etc/s6-overlay/scripts/bash-functions
+
+set -e
 
 umask "${UMASK}"
 
@@ -36,15 +37,13 @@ if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-pre.sh" ]]; then
 fi
 
 if [[ ${VPN_PROVIDER} == "pia" ]]; then
-    download_pia_wg
+    pia_download_wg
 fi
 
 if [[ ! -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.conf" ]]; then
     log_err "[VPN] Configuration file [${CONFIG_DIR}/wireguard/${VPN_CONF}.conf] was not found! Exiting..."
     exit 1
 fi
-
-set -e
 
 log_inf "[VPN] Creating interface [${VPN_CONF}]."
 
@@ -332,8 +331,6 @@ done
 log_inf "[VPN] Firewall rules:"
 nft -s list table inet hotio
 
-set +e
-
 if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh" ]]; then
     log_inf "[VPN] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh] found. Executing..."
     bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-post.sh"
@@ -342,7 +339,7 @@ fi
 log_inf "[VPN] Performing internet connectivity tests, please wait..."
 
 echo "nameserver 1.1.1.1" > "/etc/resolv.conf"
-ip4=$(curl -fsL -4 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')
+ip4=$(curl -fsL -4 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]."' || true)
 if [[ -z ${ip4} ]]; then
     log_err "[VPN] [IPV4] IP lookup failed!"
     [[ ${VPN_HEALTHCHECK_ENABLED} == "true" ]] && exit 1
@@ -353,7 +350,7 @@ fi
 
 if [[ ${ipv6_wanted} == "true" ]]; then
     echo "nameserver 2606:4700:4700::1111" > "/etc/resolv.conf"
-    ip6=$(curl -fsL -6 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]"')
+    ip6=$(curl -fsL -6 --retry 5 --retry-max-time 60 --max-time 10 wtfismyip.com/json | jq -re '"[\(.YourFuckingLocation)] [\(.YourFuckingISP)] [\(.YourFuckingIPAddress)]."' || true)
     if [[ -z ${ip6} ]]; then
         log_err "[VPN] [IPV6] IP lookup failed!"
         [[ ${VPN_HEALTHCHECK_ENABLED} == "true" ]] && exit 1

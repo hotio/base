@@ -2,9 +2,15 @@
 # shellcheck shell=bash
 
 # shellcheck source=/dev/null
-source /etc/s6-overlay/scripts/general-functions
+source /etc/s6-overlay/scripts/bash-functions
 
 umask "${UMASK}"
+
+if [[ -f "${CONFIG_DIR}/unbound.conf" ]]; then
+    cp "${CONFIG_DIR}/unbound.conf" "/dev/shm/unbound.conf"
+else
+    cp "${APP_DIR}/unbound.conf" "/dev/shm/unbound.conf"
+fi
 
 setup_nameservers
 
