@@ -2,8 +2,7 @@
 # shellcheck shell=bash
 
 # shellcheck source=/dev/null
-source /etc/s6-overlay/scripts/general-functions
-source /etc/s6-overlay/scripts/pia-functions
+source /etc/s6-overlay/scripts/bash-functions
 
 umask "${UMASK}"
 
@@ -16,7 +15,7 @@ while true; do
         pia_response=$(cat "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json")
     else
         log_inf "[PIA] Fetching new forwarded port..."
-        pia_response=$(curl --retry 5 --retry-max-time 60 --max-time 10 -Gs --connect-to "$pia_server_hostname::$pia_server_ip:" --cacert "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" --data-urlencode "token=$(get_token)" "https://${pia_server_hostname}:19999/getSignature")
+        pia_response=$(curl --retry 5 --retry-max-time 60 --max-time 10 -Gs --connect-to "$pia_server_hostname::$pia_server_ip:" --cacert "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" --data-urlencode "token=$(pia_get_token)" "https://${pia_server_hostname}:19999/getSignature")
     fi
     if [[ $(echo "${pia_response}" | jq -re '.status') == "OK" ]]; then
         [[ "${VPN_PIA_PORT_FORWARD_PERSIST}" == "true" ]] && echo "${pia_response}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json"

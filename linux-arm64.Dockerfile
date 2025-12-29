@@ -61,4 +61,5 @@ RUN mkdir "${APP_DIR}" && \
     usermod -G users hotio
 
 COPY root/ /
-RUN chmod +x /etc/s6-overlay/init-hook
+RUN chmod +x /etc/s6-overlay/init-hook && \
+    find /etc/s6-overlay/s6-rc.d -name "run*" -execdir chmod +x {} +
