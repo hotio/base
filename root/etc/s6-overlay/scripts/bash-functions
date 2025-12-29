@@ -108,39 +108,39 @@ del_rule_redirect_port() {
 pia_get_token() {
     local pia_token=""
     local pia_token_expires_at=""
-    while [[ -z "${pia_token}" ]]; do
-        while [[ ! $(find "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json" -mtime -1 2>/dev/null) ]]; do
-            pia_token=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 --request POST 'https://www.privateinternetaccess.com/api/client/v2/token' --form "username=${VPN_PIA_USER}" --form "password=${VPN_PIA_PASS}" | jq -r '.token')
-            if [[ -n ${pia_token} ]]; then
-                jq --sort-keys \
-                    --arg token            "${pia_token}" \
-                    --arg token_expires_at "$(date +"%c" --date='1 day')" \
-                    '.token = $token | .token_expires_at = $token_expires_at' <<< "{}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json"
-                find "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
-            else
-                log_err "[PIA] Fetching a token failed!" 1>&2
-            fi
-        done
-        pia_token_expires_at=$(jq -re '.token_expires_at' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json")
+    if [[ -f "${CONFIG_DIR}/wireguard/pia-token.json" ]]; then
+        pia_token_expires_at=$(jq -re '.token_expires_at' < "${CONFIG_DIR}/wireguard/pia-token.json")
         if [[ $(date -d "${pia_token_expires_at}" +%s) -gt $(date -d "$(date)" +%s) ]]; then
-            pia_token=$(jq -r '.token' < "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json")
+            pia_token=$(jq -r '.token' < "${CONFIG_DIR}/wireguard/pia-token.json")
         else
-            rm "${CONFIG_DIR}/wireguard/${VPN_CONF}.token.json"
+            rm "${CONFIG_DIR}/wireguard/pia-token.json"
         fi
-    done
+    fi
+    if [[ ! -f "${CONFIG_DIR}/wireguard/pia-token.json" ]]; then
+        pia_token=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 --request POST 'https://www.privateinternetaccess.com/api/client/v2/token' --form "username=${VPN_PIA_USER}" --form "password=${VPN_PIA_PASS}" | jq -r '.token' || true)
+        if [[ -n ${pia_token} ]]; then
+            jq --sort-keys \
+                --arg token            "${pia_token}" \
+                --arg token_expires_at "$(date +"%c" --date='1 day')" \
+                '.token = $token | .token_expires_at = $token_expires_at' <<< "{}" > "${CONFIG_DIR}/wireguard/pia-token.json"
+            find "${CONFIG_DIR}/wireguard/pia-token.json" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
+        else
+            log_err "[PIA] Fetching a token failed!"
+        fi
+    fi
     echo "${pia_token}"
 }
 
 pia_download_wg() {
-    if [[ ! $(find "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" -mtime -1 2>/dev/null) ]]; then
+    if [[ ! $(find "${CONFIG_DIR}/wireguard/pia-certificate.crt" -mtime -1 2>/dev/null) ]]; then
         log_inf "[PIA] Fetching certificate..."
-        curl -fsL --retry 5 --retry-max-time 60 --max-time 10 'https://raw.githubusercontent.com/pia-foss/manual-connections/master/ca.rsa.4096.crt' -o "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt"
-        find "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
+        curl -fsL --retry 5 --retry-max-time 60 --max-time 10 'https://raw.githubusercontent.com/pia-foss/manual-connections/master/ca.rsa.4096.crt' -o "${CONFIG_DIR}/wireguard/pia-certificate.crt"
+        find "${CONFIG_DIR}/wireguard/pia-certificate.crt" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
     fi
-    if [[ "${VPN_PIA_DIP_TOKEN}" == "no" ]]; then
-        while [[ ! $(find "${CONFIG_DIR}/wireguard/pia-regions.json" -mtime -1 2>/dev/null) ]]; do
+    if [[ "${VPN_PIA_DIP_TOKEN}" == "no" ]] || [[ -z "${VPN_PIA_DIP_TOKEN}" ]]; then
+        if [[ ! $(find "${CONFIG_DIR}/wireguard/pia-regions.json" -mtime -1 2>/dev/null) ]]; then
             log_inf "[PIA] Fetching regions data..."
-            region_data=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -re .)
+            region_data=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 https://serverlist.piaservers.net/vpninfo/servers/v6 | head -1 | jq -re '.' || true)
             if [[ "$(jq -re '.groups.wg[].name' <<< "${region_data}")" == "wireguard" ]]; then
                 echo "${region_data}" > "${CONFIG_DIR}/wireguard/pia-regions.json"
                 find "${CONFIG_DIR}/wireguard/pia-regions.json" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
@@ -148,8 +148,11 @@ pia_download_wg() {
                 jq -re '"Region|Name|Port Forwarding", "------|----|---------------", (.regions[] | "\(.id)|\(.name)|\(.port_forward)")' <<< "${region_data}" | awk 'NR<3{print $0;next}{print $0| "sort"}' | rs -c\| 0 3 > "${CONFIG_DIR}/wireguard/pia-regions.txt"
                 find "${CONFIG_DIR}/wireguard/pia-regions.txt" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
                 log_inf "[PIA] Regions list saved in [${CONFIG_DIR}/wireguard/pia-regions.txt]."
+            else
+                log_err "[PIA] Something went wrong fetching regions data!"
+                exit 1
             fi
-        done
+        fi
         log_inf "[PIA] Reading regions data from [${CONFIG_DIR}/wireguard/pia-regions.json]."
         region_data=$(cat "${CONFIG_DIR}/wireguard/pia-regions.json")
         if [[ -z "${VPN_PIA_PREFERRED_REGION}" ]]; then
@@ -162,7 +165,7 @@ pia_download_wg() {
         pia_server_hostname=$(jq -re '.cn' <<< "${pia_server}")
     else
         log_inf "[PIA] Fetching DIP server..."
-        dip_server_data=$(curl -fsL --request POST 'https://www.privateinternetaccess.com/api/client/v2/dedicated_ip' --header 'Content-Type: application/json' --header "Authorization: Token $(pia_get_token)" --data-raw '{"tokens":["'"${VPN_PIA_DIP_TOKEN}"'"]}')
+        dip_server_data=$(curl -fsL --request POST 'https://www.privateinternetaccess.com/api/client/v2/dedicated_ip' --header 'Content-Type: application/json' --header "Authorization: Token $(pia_get_token)" --data-raw '{"tokens":["'"${VPN_PIA_DIP_TOKEN}"'"]}' || true)
         pia_server_ip=$(jq -re '.[0].ip' <<< "${dip_server_data}")
         pia_server_hostname=$(jq -re '.[0].cn' <<< "${dip_server_data}")
     fi
@@ -173,12 +176,12 @@ pia_download_wg() {
         log_inf "[PIA] Found server [${pia_server_hostname} - ${pia_server_ip}]."
         wg_private_key=$(wg genkey)
         wg_public_key=$(wg pubkey <<< "${wg_private_key}")
-        if [[ "${VPN_PIA_DIP_TOKEN}" == "no" ]]; then
+        if [[ "${VPN_PIA_DIP_TOKEN}" == "no" ]] || [[ -z "${VPN_PIA_DIP_TOKEN}" ]]; then
             log_inf "[PIA] Fetching WireGuard config..."
-            wg_json_response=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 -G --connect-to "${pia_server_hostname}::${pia_server_ip}:" --cacert "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" --data-urlencode "pt=$(pia_get_token)" --data-urlencode "pubkey=${wg_public_key}" "https://${pia_server_hostname}:1337/addKey")
+            wg_json_response=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 -G --connect-to "${pia_server_hostname}::${pia_server_ip}:" --cacert "${CONFIG_DIR}/wireguard/pia-certificate.crt" --data-urlencode "pt=$(pia_get_token)" --data-urlencode "pubkey=${wg_public_key}" "https://${pia_server_hostname}:1337/addKey" || true)
         else
             log_inf "[PIA] Fetching WireGuard config using DIP token..."
-            wg_json_response=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 -G --connect-to "${pia_server_hostname}::${pia_server_ip}:" --cacert "${CONFIG_DIR}/wireguard/pia.ca.rsa.4096.crt" --user "dedicated_ip_${VPN_PIA_DIP_TOKEN}:${pia_server_ip}" --data-urlencode "pubkey=${wg_public_key}" "https://${pia_server_hostname}:1337/addKey")
+            wg_json_response=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 -G --connect-to "${pia_server_hostname}::${pia_server_ip}:" --cacert "${CONFIG_DIR}/wireguard/pia-certificate.crt" --user "dedicated_ip_${VPN_PIA_DIP_TOKEN}:${pia_server_ip}" --data-urlencode "pubkey=${wg_public_key}" "https://${pia_server_hostname}:1337/addKey" || true)
         fi
         if [[ $(jq -re '.status' <<< "${wg_json_response}") != "OK" ]]; then
             log_err "[PIA] Something went wrong fetching WireGuard config!"

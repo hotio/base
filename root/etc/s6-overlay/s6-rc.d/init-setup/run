@@ -57,11 +57,11 @@ echo -ne "
 "
 
 log_inf "Executing usermod..."
-mkdir "/tmp/temphome"
-usermod -d "/tmp/temphome" hotio > /dev/null
+tempdir=$(mktemp -d)
+usermod -d "${tempdir}" hotio > /dev/null
 usermod -o -u "${PUID}" hotio > /dev/null
 usermod -d "${CONFIG_DIR}" hotio > /dev/null
-rm -rf "/tmp/temphome"
+rm -rf "${tempdir}"
 
 log_inf "Executing groupmod..."
 groupmod -o -g "${PGID}" hotio > /dev/null
