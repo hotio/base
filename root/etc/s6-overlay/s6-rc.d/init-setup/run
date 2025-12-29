@@ -58,9 +58,9 @@ echo -ne "
 
 log_inf "Executing usermod..."
 tempdir=$(mktemp -d)
-usermod -d "${tempdir}" hotio > /dev/null
+[[ "${PUID}" -ne 0 ]] && usermod -d "${tempdir}" hotio > /dev/null
 usermod -o -u "${PUID}" hotio > /dev/null
-usermod -d "${CONFIG_DIR}" hotio > /dev/null
+[[ "${PUID}" -ne 0 ]] && usermod -d "${CONFIG_DIR}" hotio > /dev/null
 rm -rf "${tempdir}"
 
 log_inf "Executing groupmod..."
