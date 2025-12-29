@@ -26,13 +26,13 @@
   "noblevpn": {
     "description": "Ubuntu 24.04",
     "hide": false,
-    "last_updated": "2025-12-26T14:44:10.000Z",
-    "last_updated_url": "https://github.com/hotio/base/actions/runs/20524113720",
+    "last_updated": "2025-12-29T12:33:21.000Z",
+    "last_updated_url": "https://github.com/hotio/base/actions/runs/20572737564",
     "latest": false,
     "tags": [
       "noblevpn",
       "noblevpn-3.2.1.0",
-      "noblevpn-c14e451"
+      "noblevpn-dd832b0"
     ]
   }
 }
