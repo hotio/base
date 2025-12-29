@@ -15,6 +15,7 @@ get6() { ipcalc -6 -s -a --no-decorate "$1"; }
 get4net() { ipcalc -4 -s -n --no-decorate "$1"; }
 get6net() { ipcalc -6 -s -n --no-decorate "$1"; }
 getnet() { ipcalc -s -n --no-decorate "$1"; }
+getprefix() { ipcalc -s -p --no-decorate "$1"; }
 
 ts() { date '+%Y-%m-%d %H:%M:%S'; }
 log() { printf '[%s] %s\n' "$(ts)" "$*"; }
