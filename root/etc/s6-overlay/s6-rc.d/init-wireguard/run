@@ -139,7 +139,7 @@ while IFS=$'\n' read -r interface; do
             wg_local=$(jq -r '.local' <<< "${network}")
             wg_net=$(getnet "${wg_local}/${prefixlen}" || true)
             [[ "$(getnet "${local}/${prefixlen}" || true)" == "${wg_net}" ]] && [[ -n "${wg_net}" ]] && \
-                log_err "[VPN] Network [${interface}][${local}][${net}] conflicts with address [${wg_local}] on interface [${VPN_CONF}]." && exit 1
+                log_err "[VPN] Network [${interface}][${local}][${net}] conflicts with address [${wg_local}] on interface [${VPN_CONF}]! Exiting..." && exit 1
         done <<< "${networks}"
     done <<< "${networks}"
 done <<< "${interfaces}"
@@ -178,7 +178,7 @@ for lan_network in "${lan_networks[@]}"; do
             wg_local=$(jq -r '.local' <<< "${network}")
             wg_net=$(getnet "${wg_local}/$(getprefix "${lan_network}" || true)" || true)
             [[ "$(getnet "${lan_network}" || true)" == "${wg_net}" ]] && [[ -n "${net}" ]] && \
-                log_err "[VPN] Route for [${lan_network}][LAN] conflicts with address [${wg_local}] on interface [${interface}]." && exit 1
+                log_err "[VPN] Route for [${lan_network}][LAN] conflicts with address [${wg_local}] on interface [${interface}]! Exiting..." && exit 1
         done <<< "${networks}"
     done <<< "${interfaces}"
     lan_network_corrected=$(getnet "${lan_network}")/$(getprefix "${lan_network}")
