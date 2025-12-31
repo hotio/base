@@ -14,29 +14,38 @@ while true; do
         log_inf "[PIA] Using persistent forwarded port."
         pia_response=$(cat "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json")
     else
-        log_inf "[PIA] Fetching new forwarded port..."
+        log_inf "[PIA] Requesting forwarded port..."
         pia_response=$(curl --retry 5 --retry-max-time 60 --max-time 10 -Gs --connect-to "$pia_server_hostname::$pia_server_ip:" --cacert "${CONFIG_DIR}/wireguard/pia-certificate.crt" --data-urlencode "token=$(pia_get_token)" "https://${pia_server_hostname}:19999/getSignature")
     fi
     if [[ $(echo "${pia_response}" | jq -re '.status') == "OK" ]]; then
-        [[ "${VPN_PIA_PORT_FORWARD_PERSIST}" == "true" ]] && echo "${pia_response}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json"
+        if [[ "${VPN_PIA_PORT_FORWARD_PERSIST}" == "true" ]]; then
+            echo "${pia_response}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json"
+            find "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
+        else
+            rm -rf "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json"
+        fi
         pia_payload=$(jq -re '.payload' <<< "${pia_response}")
         pia_signature=$(jq -re '.signature' <<< "${pia_response}")
         pia_payload_decoded=$(base64 -d <<< "${pia_payload}")
         pia_port=$(jq -re '.port' <<< "${pia_payload_decoded}")
         pia_port_expiration=$(jq -re '.expires_at' <<< "${pia_payload_decoded}")
-        [[ $(date -d "${pia_port_expiration}" +%s) -lt $(date -d "$(date)" +%s) ]] && rm -rf "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json" && continue
+        if [[ $(date -d "${pia_port_expiration}" +%s) -lt $(date -d "$(date)" +%s) ]]; then
+            log_wrn "[PIA] Forwarded port is expired."
+            rm -rf "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json"
+            continue
+        fi
         log_inf "[PIA] Forwarded port will expire at [${pia_port_expiration}]."
         echo "${pia_port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
         while [[ $(date -d "${pia_port_expiration}" +%s) -gt $(date -d "$(date)" +%s) ]]; do
             bind_port_response="$(curl --retry 5 --retry-max-time 60 --max-time 10 -Gs --connect-to "$pia_server_hostname::$pia_server_ip:" --cacert "${CONFIG_DIR}/wireguard/pia-certificate.crt" --data-urlencode "payload=${pia_payload}" --data-urlencode "signature=${pia_signature}" "https://${pia_server_hostname}:19999/bindPort")"
             if ! [[ $(jq -re '.status' <<< "${bind_port_response}") == "OK" ]]; then
-                log_wrn "[PIA] Port bind failed!"
+                log_wrn "[PIA] Port bind failed."
                 break
             fi
             sleep 900
         done
     else
-        log_wrn "[PIA] Signature and Payload retrieval failed!"
+        log_wrn "[PIA] Forwarded port request failed."
     fi
     sleep 60
 done
