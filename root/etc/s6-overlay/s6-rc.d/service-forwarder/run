@@ -16,6 +16,7 @@ sleep 10
 
 old_port="0"
 while true; do
+    old_firewall_rules=$(nft -s list table inet hotio)
     re='^[0-9]+$'
     if [[ "${VPN_AUTO_PORT_FORWARD}" =~ $re ]]; then
         echo "${VPN_AUTO_PORT_FORWARD}" > "${CONFIG_DIR}/wireguard/forwarded_port"
@@ -54,7 +55,12 @@ while true; do
             old_port="${port}"
         fi
     else
-        log_wrn "[FORWARDER] The file [${CONFIG_DIR}/wireguard/forwarded_port] was not found."
+        log_wrn "[FORWARDER] The file [${CONFIG_DIR}/wireguard/forwarded_port] was not found. Set [VPN_AUTO_PORT_FORWARD=false] if you don't plan on providing that file yourself."
+    fi
+    new_firewall_rules=$(nft -s list table inet hotio)
+    if [[ "${old_firewall_rules}" != "${new_firewall_rules}" ]]; then
+        log_inf "[VPN] Firewall rules have changed, updated rules:"
+        echo "${new_firewall_rules}"
     fi
     sleep "${sleep_time}"
 done
