@@ -18,6 +18,7 @@
   },
   "noblevpn": {
     "commit_message": "improve pia port forward logging",
+    "commit_sha": "d461e729479ad4a8d99e776ac0495ef95696b4d0",
     "description": "Ubuntu 24.04",
     "hide": false,
     "last_updated": "2025-12-31T16:42:57.000Z",
