@@ -24,7 +24,7 @@ while true; do
         sleep_time=60
     fi
     if [[ -f "${CONFIG_DIR}/wireguard/forwarded_port" ]]; then
-        port=$(sed -n '1p' "${CONFIG_DIR}/wireguard/forwarded_port")
+        port=$(sed -n '1p' "${CONFIG_DIR}/wireguard/forwarded_port" 2> /dev/null)
         if [[ "${port}" =~ $re ]] && [[ "${port}" -lt 65536 ]] && [[ "${port}" -gt 0 ]]; then
             if [[ "${old_port}" != "${port}" ]]; then
                 log_inf "[FORWARDER] Forwarded port is [${port}]."
@@ -50,8 +50,12 @@ while true; do
                     log_inf "[VPN] Firewall rules have changed, updated rules:"
                     echo "${new_firewall_rules}"
                 fi
-                # shellcheck source=/dev/null
-                source "${APP_DIR}/forwarded_port_update_app"
+                port_configured=$(sed -n '1p' "${CONFIG_DIR}/wireguard/forwarded_port_configured" 2> /dev/null)
+                if [[ "${port_configured}" != "${port}" ]]; then
+                    echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port_configured"
+                    # shellcheck source=/dev/null
+                    source "${APP_DIR}/forwarded_port_update_app"
+                fi
                 if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh" ]]; then
                     log_inf "[FORWARDER] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh] found. Executing..."
                     bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh"
