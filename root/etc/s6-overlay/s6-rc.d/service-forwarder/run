@@ -16,7 +16,6 @@ sleep 10
 
 old_port="0"
 while true; do
-    old_firewall_rules=$(nft -s list table inet hotio)
     re='^[0-9]+$'
     if [[ "${VPN_AUTO_PORT_FORWARD}" =~ $re ]]; then
         echo "${VPN_AUTO_PORT_FORWARD}" > "${CONFIG_DIR}/wireguard/forwarded_port"
@@ -26,42 +25,45 @@ while true; do
     fi
     if [[ -f "${CONFIG_DIR}/wireguard/forwarded_port" ]]; then
         port=$(sed -n '1p' "${CONFIG_DIR}/wireguard/forwarded_port")
-        [[ "${port}" =~ $re ]] || \
-            log_err "[FORWARDER] The file [${CONFIG_DIR}/wireguard/forwarded_port] contains a value that's not a number!"
-        if [[ "${old_port}" != "${port}" ]] && [[ "${port}" =~ $re ]]; then
-            log_inf "[FORWARDER] Forwarded port is [${port}]."
-            IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
-            for forward_port in "${forward_ports[@]}"; do
-                [[ ${forward_port} == *@* ]] && continue
-                port_is_redirected="true"
-                forward_port="${forward_port//[[:space:]]/}"
-                internal="${forward_port#*@}"
-                del_rule_redirect_port "${old_port}" "${internal}"
-                add_rule_redirect_port "${port}" "${internal}"
-                add_rule_expose_port "${internal}"
-            done
-            if [[ "${port_is_redirected}" != "true" ]]; then
-                del_rule_expose_port "${old_port}/tcp"
-                del_rule_expose_port "${old_port}/udp"
-                add_rule_expose_port "${port}/tcp"
-                add_rule_expose_port "${port}/udp"
+        if [[ "${port}" =~ $re ]] && [[ "${port}" -lt 65536 ]] && [[ "${port}" -gt 0 ]]; then
+            if [[ "${old_port}" != "${port}" ]]; then
+                log_inf "[FORWARDER] Forwarded port is [${port}]."
+                old_firewall_rules=$(nft -s list table inet hotio)
+                IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
+                for forward_port in "${forward_ports[@]}"; do
+                    [[ ${forward_port} == *@* ]] && continue
+                    port_is_redirected="true"
+                    forward_port="${forward_port//[[:space:]]/}"
+                    internal="${forward_port#*@}"
+                    del_rule_redirect_port "${old_port}" "${internal}"
+                    add_rule_redirect_port "${port}" "${internal}"
+                    add_rule_expose_port "${internal}"
+                done
+                if [[ "${port_is_redirected}" != "true" ]]; then
+                    del_rule_expose_port "${old_port}/tcp"
+                    del_rule_expose_port "${old_port}/udp"
+                    add_rule_expose_port "${port}/tcp"
+                    add_rule_expose_port "${port}/udp"
+                fi
+                new_firewall_rules=$(nft -s list table inet hotio)
+                if [[ "${old_firewall_rules}" != "${new_firewall_rules}" ]]; then
+                    log_inf "[VPN] Firewall rules have changed, updated rules:"
+                    echo "${new_firewall_rules}"
+                fi
+                # shellcheck source=/dev/null
+                source "${APP_DIR}/forwarded_port_update_app"
+                if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh" ]]; then
+                    log_inf "[FORWARDER] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh] found. Executing..."
+                    bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh"
+                fi
+                old_port="${port}"
+                echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port_validated"
             fi
-            # shellcheck source=/dev/null
-            source "${APP_DIR}/forwarded_port_update_app"
-            if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh" ]]; then
-                log_inf "[FORWARDER] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh] found. Executing..."
-                bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh"
-            fi
-            old_port="${port}"
+        else
+            log_err "[FORWARDER] The file [${CONFIG_DIR}/wireguard/forwarded_port] contains a value that's not a valid port!"
         fi
     else
         log_wrn "[FORWARDER] The file [${CONFIG_DIR}/wireguard/forwarded_port] was not found. Set [VPN_AUTO_PORT_FORWARD=false] if you don't plan on providing that file yourself."
     fi
-    new_firewall_rules=$(nft -s list table inet hotio)
-    if [[ "${old_firewall_rules}" != "${new_firewall_rules}" ]]; then
-        log_inf "[VPN] Firewall rules have changed, updated rules:"
-        echo "${new_firewall_rules}"
-    fi
-    touch "${CONFIG_DIR}/wireguard/forwarded_port_updated"
     sleep "${sleep_time}"
 done
