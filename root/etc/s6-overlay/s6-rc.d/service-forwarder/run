@@ -62,5 +62,6 @@ while true; do
         log_inf "[VPN] Firewall rules have changed, updated rules:"
         echo "${new_firewall_rules}"
     fi
+    touch "${CONFIG_DIR}/wireguard/forwarded_port_updated"
     sleep "${sleep_time}"
 done
