@@ -1,7 +1,7 @@
 #!/bin/bash
 set -exuo pipefail
 
-json=$(cat VERSION.json)
+json=$(cat meta.json)
 upstream_image=$(jq -re '.upstream_image' <<< "${json}")
 upstream_tag=$(jq -re '.upstream_tag' <<< "${json}")
 manifest=$(skopeo inspect --raw "docker://${upstream_image}:${upstream_tag}")
@@ -10,4 +10,4 @@ upstream_digest_arm64=$(jq -re '.manifests[] | select (.platform.architecture ==
 jq --sort-keys \
     --arg upstream_digest_amd64 "${upstream_digest_amd64}" \
     --arg upstream_digest_arm64 "${upstream_digest_arm64}" \
-    '.upstream_digest_amd64 = $upstream_digest_amd64 | .upstream_digest_arm64 = $upstream_digest_arm64' <<< "${json}" | tee VERSION.json
+    '.upstream_digest_amd64 = $upstream_digest_amd64 | .upstream_digest_arm64 = $upstream_digest_arm64' <<< "${json}" | tee meta.json
