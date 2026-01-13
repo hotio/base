@@ -16,8 +16,7 @@ RUN apk --update --no-cache add build-base linux-headers && \
 FROM ${UPSTREAM_IMAGE}@${UPSTREAM_DIGEST_ARM64}
 
 ARG IMAGE_STATS
-ARG BUILD_ARCHITECTURE
-ENV IMAGE_STATS=${IMAGE_STATS} BUILD_ARCHITECTURE=${BUILD_ARCHITECTURE} \
+ENV IMAGE_STATS=${IMAGE_STATS} \
     APP_DIR="/app" CONFIG_DIR="/config" XDG_CONFIG_HOME="/config/.config" XDG_CACHE_HOME="/config/.cache" XDG_DATA_HOME="/config/.local/share" \
     PUID="1000" PGID="1000" UMASK="002" TZ="Etc/UTC" \
     LANG="en_US.UTF-8" LANGUAGE="en_US:en" LC_ALL="en_US.UTF-8" \
