@@ -14,25 +14,6 @@ image=$(jq -r '.image' <<< "${IMAGE_STATS}")
 revision=$(jq -r '.revision' <<< "${IMAGE_STATS}")
 version=$(jq -r '.version' <<< "${IMAGE_STATS}")
 app_uri=$(jq -r 'if .app != "" then "/containers/\(.app)" else empty end' <<< "${IMAGE_STATS}")
-license_app=$(jq -r '.license' <<< "${IMAGE_STATS}")
-
-if [[ -n ${license_app} ]]; then
-license_info="
-
-----------------------------------------------------------------------
-LICENSE INFORMATION
-----------------------------------------------------------------------
-The application(s) made available to you by this docker image is/are
-released under the license(s) ${license_app}.
-Each application is released under their own license.
-The files used to build this image are released under their license.
-The upstream docker images that are used and the tools bundled also
-have their own seperate licenses.
-The above information is provided on a best-effort basis.
-----------------------------------------------------------------------
-
-"
-fi
 
 echo -ne "
 $(figlet "hotio")
@@ -43,7 +24,7 @@ Image:         ${image}
 Revision:      ${revision}
 Version:       ${version}
 OS:            $(uname -s) $(uname -r) $(uname -m)
-${license_info}
+
 ----------------------------------------------------------------------
 ENVIRONMENT BASE
 ----------------------------------------------------------------------
