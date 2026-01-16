@@ -14,6 +14,21 @@ image=$(jq -r '.image' <<< "${IMAGE_STATS}")
 revision=$(jq -r '.revision' <<< "${IMAGE_STATS}")
 version=$(jq -r '.version' <<< "${IMAGE_STATS}")
 app_uri=$(jq -r 'if .app != "" then "/containers/\(.app)" else empty end' <<< "${IMAGE_STATS}")
+license_app=$(jq -r '.license' <<< "${IMAGE_STATS}")
+
+if [[ -z ${license_app} ]]; then
+license_info="
+
+----------------------------------------------------------------------
+LICENSE INFORMATION
+----------------------------------------------------------------------
+The application made available to you by this docker image is released
+under the ${license_app} license. The image and related files/scripts
+made by hotio are released under the GPL-3.0 license.
+----------------------------------------------------------------------
+
+"
+fi
 
 echo -ne "
 $(figlet "hotio")
@@ -24,7 +39,7 @@ Image:         ${image}
 Revision:      ${revision}
 Version:       ${version}
 OS:            $(uname -s) $(uname -r) $(uname -m)
-
+${license_info}
 ----------------------------------------------------------------------
 ENVIRONMENT BASE
 ----------------------------------------------------------------------
