@@ -16,7 +16,7 @@ version=$(jq -r '.version' <<< "${IMAGE_STATS}")
 app_uri=$(jq -r 'if .app != "" then "/containers/\(.app)" else empty end' <<< "${IMAGE_STATS}")
 license_app=$(jq -r '.license' <<< "${IMAGE_STATS}")
 
-if [[ -z ${license_app} ]]; then
+if [[ -n ${license_app} ]]; then
 license_info="
 
 ----------------------------------------------------------------------
