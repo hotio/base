@@ -22,9 +22,13 @@ license_info="
 ----------------------------------------------------------------------
 LICENSE INFORMATION
 ----------------------------------------------------------------------
-The application made available to you by this docker image is released
-under the ${license_app} license. The image and related files/scripts
-made by hotio are released under the GPL-3.0 license.
+The application(s) made available to you by this docker image is/are
+released under the license(s) ${license_app}.
+Each application is released under their own license.
+The files used to build this image are released under their license.
+The upstream docker images that are used and the tools bundled also
+have their own seperate licenses.
+The above information is provided on a best-effort basis.
 ----------------------------------------------------------------------
 
 "
