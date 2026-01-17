@@ -15,6 +15,17 @@ revision=$(jq -r '.revision' <<< "${IMAGE_STATS}")
 version=$(jq -r '.version' <<< "${IMAGE_STATS}")
 app_uri=$(jq -r 'if .app != "" then "/containers/\(.app)" else empty end' <<< "${IMAGE_STATS}")
 
+if [[ -f "${APP_DIR}/DISCLAIMER.txt" ]]; then
+disclaimer_text=$(fold -w 70 -s "${APP_DIR}/DISCLAIMER.txt")
+disclaimer="
+----------------------------------------------------------------------
+DISCLAIMER
+----------------------------------------------------------------------
+${disclaimer_text}
+----------------------------------------------------------------------
+"
+fi
+
 echo -ne "
 $(figlet "hotio")
 Donate:        https://hotio.dev/donate
@@ -24,7 +35,7 @@ Image:         ${image}
 Revision:      ${revision}
 Version:       ${version}
 OS:            $(uname -s) $(uname -r) $(uname -m)
-
+${disclaimer}
 ----------------------------------------------------------------------
 ENVIRONMENT BASE
 ----------------------------------------------------------------------
