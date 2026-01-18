@@ -58,6 +58,17 @@ while true; do
                 fi
                 old_port="${port}"
                 echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port_validated"
+                log_inf "[FORWARDER] Checking if forwarded port [${port}] is reachable..."
+                i=0; while [[ ${i} -lt 5 ]]; do
+                    ((i+=1))
+                    sleep 5
+                    if [[ $(curl -fsL -4 "https://portchecker.io/api/me/${port}" --header 'Accept: */*') != "True" ]]; then
+                        [[ ${i} -eq 4 ]] && log_wrn "[FORWARDER] Forwarded port [${port}] is closed, no service is listening or couldn't reliably check the status."
+                    else
+                        log_inf "[FORWARDER] Forwarded port [${port}] is open."
+                        break
+                    fi
+                done
             fi
         else
             log_err "[FORWARDER] The file [${CONFIG_DIR}/wireguard/forwarded_port] contains a value that's not a valid port!"
