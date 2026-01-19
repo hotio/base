@@ -26,12 +26,12 @@ while true; do
             if [[ "${old_port}" != "${port}" ]]; then
                 log_inf "[FORWARDER] Forwarded port is [${port}]."
                 old_firewall_rules=$(nft -s list table inet hotio)
-                IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
-                for forward_port in "${forward_ports[@]}"; do
-                    [[ ${forward_port} == *@* ]] && continue
+                IFS=',' read -ra redirects <<< "${VPN_PORT_REDIRECTS%,}"
+                for redirect in "${redirects[@]}"; do
+                    [[ ${redirect} == *@* ]] && continue
                     port_is_redirected="true"
-                    forward_port="${forward_port//[[:space:]]/}"
-                    internal="${forward_port#*@}"
+                    redirect="${redirect//[[:space:]]/}"
+                    internal="${redirect#*@}"
                     del_rule_redirect_port "${old_port}" "${internal}"
                     add_rule_redirect_port "${port}" "${internal}"
                     add_rule_expose_port "${internal}"
