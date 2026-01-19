@@ -10,15 +10,15 @@ find /var/run/s6/container_environment/ -type f -name 'FILE__*' -print0 | while 
     NEW_VAR=${FILENAME//FILE__/}
     SECRET_FILE=$(cat "${FILENAME}")
     if [[ ! -f ${SECRET_FILE} ]]; then
-        log_err "[${NEW_VAR##*/}] The file \"${SECRET_FILE}\" wasn't found!"
+        log_err "[${NEW_VAR##*/}] The file [${SECRET_FILE}] wasn't found! Exiting..."
         exit 1
     fi
     SECRET=$(cat "${SECRET_FILE}")
     if [[ -n ${SECRET} ]]; then
         echo -n "${SECRET}" > "${NEW_VAR}"
-        log_inf "[${NEW_VAR##*/}] Set with secret from \"${SECRET_FILE}\"."
+        log_inf "[${NEW_VAR##*/}] Set with secret from [${SECRET_FILE}]."
     else
-        log_err "[${NEW_VAR##*/}] No secret found in \"${SECRET_FILE}\"!"
+        log_err "[${NEW_VAR##*/}] No secret found in [${SECRET_FILE}]! Exiting..."
         exit 1
     fi
 done
