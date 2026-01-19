@@ -180,7 +180,7 @@ pia_download_wg() {
                 find "${CONFIG_DIR}/wireguard/pia-regions.txt" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
                 log_inf "[PIA] Regions list saved in [${CONFIG_DIR}/wireguard/pia-regions.txt]."
             else
-                log_err "[PIA] Something went wrong fetching regions data!"
+                log_err "[PIA] Something went wrong fetching regions data! Exiting..."
                 exit 1
             fi
         fi
@@ -201,7 +201,7 @@ pia_download_wg() {
         pia_server_hostname=$(jq -re '.[0].cn' <<< "${dip_server_data}")
     fi
     if [[ -z "${pia_server_hostname}" ]] || [[ "${pia_server_hostname}" == null ]] || [[ -z "${pia_server_ip}" ]] || [[ "${pia_server_ip}" == null ]]; then
-        log_err "[PIA] Something went wrong fetching a server!"
+        log_err "[PIA] Something went wrong fetching a server! Exiting..."
         exit 1
     else
         log_inf "[PIA] Found server [${pia_server_hostname} - ${pia_server_ip}]."
@@ -215,7 +215,7 @@ pia_download_wg() {
             wg_json_response=$(curl -fsL --retry 5 --retry-max-time 60 --max-time 10 -G --connect-to "${pia_server_hostname}::${pia_server_ip}:" --cacert "${CONFIG_DIR}/wireguard/pia-certificate.crt" --user "dedicated_ip_${VPN_PIA_DIP_TOKEN}:${pia_server_ip}" --data-urlencode "pubkey=${wg_public_key}" "https://${pia_server_hostname}:1337/addKey" || true)
         fi
         if [[ $(jq -re '.status' <<< "${wg_json_response}") != "OK" ]]; then
-            log_err "[PIA] Something went wrong fetching WireGuard config!"
+            log_err "[PIA] Something went wrong fetching WireGuard config! Exiting..."
             exit 1
         fi
         {
