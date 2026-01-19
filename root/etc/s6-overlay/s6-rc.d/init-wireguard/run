@@ -15,6 +15,37 @@ if [[ -n ${VPN_AUTO_PORT_FORWARD_TO_PORTS} ]]; then
     log_wrn "[VPN] The variable [VPN_AUTO_PORT_FORWARD_TO_PORTS] is deprecated in favor of [VPN_PORT_REDIRECTS], please adjust your config!"
 fi
 
+IFS=',' read -ra ports <<< "${WEBUI_PORTS%,}"
+for port in "${ports[@]}"; do
+    if ! valid_port_proto "${port//[[:space:]]/}"; then
+        log_err "[VPN] The value [${port}] is not valid input for [WEBUI_PORTS]!"
+        exit 1
+    fi
+done
+
+IFS=',' read -ra ports <<< "${VPN_EXPOSE_PORTS_ON_LAN%,}"
+for port in "${ports[@]}"; do
+    if ! valid_port_proto "${port//[[:space:]]/}"; then
+        log_err "[VPN] The value [${port}] is not valid input for [VPN_EXPOSE_PORTS_ON_LAN]!"
+        exit 1
+    fi
+done
+
+IFS=',' read -ra ports <<< "${VPN_PORT_REDIRECTS%,}"
+for port in "${ports[@]}"; do
+    if [[ ${port} == *@* ]]; then
+        if ! valid_redirect "${port//[[:space:]]/}"; then
+            log_err "[VPN] The value [${port}] is not valid input for [VPN_PORT_REDIRECTS]!"
+            exit 1
+        fi
+    else
+        if ! valid_port_proto "${port//[[:space:]]/}"; then
+            log_err "[VPN] The value [${port}] is not valid input for [VPN_PORT_REDIRECTS]!"
+            exit 1
+        fi
+    fi
+done
+
 if ! capsh --print | grep -q "Current:.*cap_net_admin"; then
     log_err "[VPN] Not the right capabilities, add [--cap-add=NET_ADMIN] and remove [--privileged=true] if set! Exiting..."
     exit 1
