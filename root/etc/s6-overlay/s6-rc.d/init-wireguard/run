@@ -20,6 +20,8 @@ for port in "${ports[@]}"; do
     if ! valid_port_proto "${port//[[:space:]]/}"; then
         log_err "[VPN] The value [${port}] is not valid input for [WEBUI_PORTS]! Exiting..."
         exit 1
+    else
+        exposed_ports+="${port//[[:space:]]/},"
     fi
 done
 
@@ -28,6 +30,8 @@ for port in "${ports[@]}"; do
     if ! valid_port_proto "${port//[[:space:]]/}"; then
         log_err "[VPN] The value [${port}] is not valid input for [VPN_EXPOSE_PORTS_ON_LAN]! Exiting..."
         exit 1
+    else
+        exposed_ports+="${port//[[:space:]]/},"
     fi
 done
 
@@ -37,6 +41,8 @@ for port in "${ports[@]}"; do
         if ! valid_redirect "${port//[[:space:]]/}"; then
             log_err "[VPN] The value [${port}] is not valid input for [VPN_PORT_REDIRECTS]! Exiting..."
             exit 1
+        else
+            static_redirects+="${port//[[:space:]]/},"
         fi
     else
         if ! valid_port_proto "${port//[[:space:]]/}"; then
@@ -236,15 +242,6 @@ if valid6 "${default6_gateway}" || [[ "${ipv6_wanted}" == "true" ]]; then
     log_inf "[VPN] Routing all other IPv6 traffic via interface [${VPN_CONF}]."
 fi
 
-IFS=',' read -ra ports <<< "${WEBUI_PORTS%,}"
-for port in "${ports[@]}"; do
-    exposed_ports+="${port//[[:space:]]/},"
-done
-IFS=',' read -ra ports <<< "${VPN_EXPOSE_PORTS_ON_LAN%,}"
-for port in "${ports[@]}"; do
-    exposed_ports+="${port//[[:space:]]/},"
-done
-
 # Create table and chains
 nft add table inet hotio
 nft add chain inet hotio forward    '{ type filter hook forward    priority 0 ; policy drop; }'
@@ -258,25 +255,20 @@ nft add chain inet hotio prerouting '{ type nat    hook prerouting priority -100
 #nft add rule inet hotio input icmp type echo-request limit rate 4/second counter accept
 #nft add rule inet hotio input icmpv6 type echo-request limit rate 4/second counter accept
 
-# Allow all incoming traffic from LAN if VPN_LAN_LEAK_ENABLED=true
-if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
-    IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
-    for lan_network in "${lan_networks[@]}"; do
-        lan_network="${lan_network//[[:space:]]/}"
+# Allow incoming traffic from VPN_LAN_NETWORK
+IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
+for lan_network in "${lan_networks[@]}"; do
+    lan_network="${lan_network//[[:space:]]/}"
+    if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
+        # Everything
         valid4 "${lan_network}" && valid4 "${default4_address}" && \
             nft add rule inet hotio input iifname "${default4_interface}" ip saddr "${lan_network}" ip daddr "${default4_address}" counter accept
         valid6 "${lan_network}" && valid6 "${default6_address}" && \
             nft add rule inet hotio input iifname "${default6_interface}" ip6 saddr "${lan_network}" ip6 daddr "${default6_address}" counter accept
-    done
-fi
-
-# Allow incoming traffic from LAN to port
-IFS=',' read -ra ports <<< "${exposed_ports%,}"
-for port in "${ports[@]}"; do
-    if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
-        IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
-        for lan_network in "${lan_networks[@]}"; do
-            lan_network="${lan_network//[[:space:]]/}"
+    else
+        # Only exposed ports
+        IFS=',' read -ra ports <<< "${exposed_ports%,}"
+        for port in "${ports[@]}"; do
             valid4 "${lan_network}" && valid4 "${default4_address}" && \
                 nft add rule inet hotio input iifname "${default4_interface}" "${port##*/}" dport "${port%/*}" ip saddr "${lan_network}" ip daddr "${default4_address}" counter accept
             valid6 "${lan_network}" && valid6 "${default6_address}" && \
@@ -285,7 +277,7 @@ for port in "${ports[@]}"; do
     fi
 done
 
-# Allow incoming traffic on local networks
+# Allow incoming traffic from local docker networks
 IFS=',' read -ra networks <<< "${network_list%,}"
 for network in "${networks[@]}"; do
     IFS=' ' read -ra part <<< "${network}"
@@ -315,25 +307,20 @@ valid6 "${vpn_endpoint_ip}" && \
 #nft add rule inet hotio output icmp type echo-request counter accept
 #nft add rule inet hotio output icmpv6 type echo-request counter accept
 
-# Allow all outgoing traffic to LAN if VPN_LAN_LEAK_ENABLED=true
-if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
-    IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
-    for lan_network in "${lan_networks[@]}"; do
-        lan_network="${lan_network//[[:space:]]/}"
+# Allow outgoing traffic to VPN_LAN_NETWORK
+IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
+for lan_network in "${lan_networks[@]}"; do
+    lan_network="${lan_network//[[:space:]]/}"
+    if [[ ${VPN_LAN_LEAK_ENABLED} == "true" ]]; then
+        # Everything
         valid4 "${lan_network}" && valid4 "${default4_address}" && \
             nft add rule inet hotio output oifname "${default4_interface}" ip saddr "${default4_address}" ip daddr "${lan_network}" counter accept
         valid6 "${lan_network}" && valid6 "${default6_address}" && \
             nft add rule inet hotio output oifname "${default6_interface}" ip6 saddr "${default6_address}" ip6 daddr "${lan_network}" counter accept
-    done
-fi
-
-# Allow outgoing traffic to LAN from port
-IFS=',' read -ra ports <<< "${exposed_ports%,}"
-for port in "${ports[@]}"; do
-    if [[ ${VPN_LAN_LEAK_ENABLED} != "true" ]]; then
-        IFS=',' read -ra lan_networks <<< "${VPN_LAN_NETWORK%,}"
-        for lan_network in "${lan_networks[@]}"; do
-            lan_network="${lan_network//[[:space:]]/}"
+    else
+        # Only exposed ports
+        IFS=',' read -ra ports <<< "${exposed_ports%,}"
+        for port in "${ports[@]}"; do
             valid4 "${lan_network}" && valid4 "${default4_address}" && \
                 nft add rule inet hotio output oifname "${default4_interface}" "${port##*/}" sport "${port%/*}" ip saddr "${default4_address}" ip daddr "${lan_network}" counter accept
             valid6 "${lan_network}" && valid6 "${default6_address}" && \
@@ -342,7 +329,7 @@ for port in "${ports[@]}"; do
     fi
 done
 
-# Allow outgoing traffic on local networks
+# Allow outgoing traffic to local docker networks
 IFS=',' read -ra networks <<< "${network_list%,}"
 for network in "${networks[@]}"; do
     IFS=' ' read -ra part <<< "${network}"
@@ -368,12 +355,11 @@ valid6 "${vpn_endpoint_ip}" && \
 
 ## REDIRECTS and EXPOSED PORTS
 
-IFS=',' read -ra forward_ports <<< "${VPN_PORT_REDIRECTS%,}"
-for forward_port in "${forward_ports[@]}"; do
-    [[ ! ${forward_port} == *@* ]] && continue
-    forward_port="${forward_port//[[:space:]]/}"
-    external="${forward_port%@*}"
-    internal="${forward_port#*@}"
+# Add static redirects and expose ports for incoming traffic on wg interface
+IFS=',' read -ra redirects <<< "${static_redirects%,}"
+for redirect in "${redirects[@]}"; do
+    external="${redirect%@*}"
+    internal="${redirect#*@}"
     add_rule_redirect_port "${external}" "${internal}"
     add_rule_expose_port "${internal}"
 done
