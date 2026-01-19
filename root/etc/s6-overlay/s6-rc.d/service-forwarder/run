@@ -11,21 +11,18 @@ if [[ -n ${VPN_AUTO_PORT_FORWARD_TO_PORTS} ]]; then
     log_wrn "[FORWARDER] The variable [VPN_AUTO_PORT_FORWARD_TO_PORTS] is deprecated in favor of [VPN_PORT_REDIRECTS], please adjust your config!"
 fi
 
-# Wait for other services to do their thing
-sleep 10
+if valid_port "${VPN_AUTO_PORT_FORWARD}"; then
+    echo "${VPN_AUTO_PORT_FORWARD}" > "${CONFIG_DIR}/wireguard/forwarded_port"
+    sleep_time=86400
+else
+    # Wait for pia/proton services to do their thing
+    sleep 10
+fi
 
-old_port="0"
 while true; do
-    re='^[0-9]+$'
-    if [[ "${VPN_AUTO_PORT_FORWARD}" =~ $re ]]; then
-        echo "${VPN_AUTO_PORT_FORWARD}" > "${CONFIG_DIR}/wireguard/forwarded_port"
-        sleep_time=86400
-    else
-        sleep_time=60
-    fi
     if [[ -f "${CONFIG_DIR}/wireguard/forwarded_port" ]]; then
         port=$(sed -n '1p' "${CONFIG_DIR}/wireguard/forwarded_port")
-        if [[ "${port}" =~ $re ]] && [[ "${port}" -lt 65536 ]] && [[ "${port}" -gt 0 ]]; then
+        if valid_port "${port}"; then
             if [[ "${old_port}" != "${port}" ]]; then
                 log_inf "[FORWARDER] Forwarded port is [${port}]."
                 old_firewall_rules=$(nft -s list table inet hotio)
@@ -76,5 +73,5 @@ while true; do
     else
         log_wrn "[FORWARDER] The file [${CONFIG_DIR}/wireguard/forwarded_port] was not found. Set [VPN_AUTO_PORT_FORWARD=false] if you don't plan on providing that file yourself."
     fi
-    sleep "${sleep_time}"
+    sleep "${sleep_time:-60}"
 done
