@@ -18,7 +18,7 @@ fi
 IFS=',' read -ra ports <<< "${WEBUI_PORTS%,}"
 for port in "${ports[@]}"; do
     if ! valid_port_proto "${port//[[:space:]]/}"; then
-        log_err "[VPN] The value [${port}] is not valid input for [WEBUI_PORTS]!"
+        log_err "[VPN] The value [${port}] is not valid input for [WEBUI_PORTS]! Exiting..."
         exit 1
     fi
 done
@@ -26,7 +26,7 @@ done
 IFS=',' read -ra ports <<< "${VPN_EXPOSE_PORTS_ON_LAN%,}"
 for port in "${ports[@]}"; do
     if ! valid_port_proto "${port//[[:space:]]/}"; then
-        log_err "[VPN] The value [${port}] is not valid input for [VPN_EXPOSE_PORTS_ON_LAN]!"
+        log_err "[VPN] The value [${port}] is not valid input for [VPN_EXPOSE_PORTS_ON_LAN]! Exiting..."
         exit 1
     fi
 done
@@ -35,12 +35,12 @@ IFS=',' read -ra ports <<< "${VPN_PORT_REDIRECTS%,}"
 for port in "${ports[@]}"; do
     if [[ ${port} == *@* ]]; then
         if ! valid_redirect "${port//[[:space:]]/}"; then
-            log_err "[VPN] The value [${port}] is not valid input for [VPN_PORT_REDIRECTS]!"
+            log_err "[VPN] The value [${port}] is not valid input for [VPN_PORT_REDIRECTS]! Exiting..."
             exit 1
         fi
     else
         if ! valid_port_proto "${port//[[:space:]]/}"; then
-            log_err "[VPN] The value [${port}] is not valid input for [VPN_PORT_REDIRECTS]!"
+            log_err "[VPN] The value [${port}] is not valid input for [VPN_PORT_REDIRECTS]! Exiting..."
             exit 1
         fi
     fi
