@@ -17,15 +17,19 @@ done
 
 while true; do
     if ! natpmpc -g "${vpn_gw}" &> /dev/null; then
-        log_wrn "[PROTON] Endpoint [${vpn_gw}] does not support port forwarding!"
+        log_wrn "[PROTON] Port forwarding not possible, make sure you turned on [NAT-PMP] and selected a P2P server."
     else
-        port=$(natpmpc -g "${vpn_gw}" -a 1 0 udp 60 | grep -P -o -m 1 '(?<=Mapped public port\s)\d+')
-        if [[ -n "${port}" ]]; then
-            natpmpc -g "${vpn_gw}" -a 1 0 tcp 60 &> /dev/null
-            echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
-        else
-            log_wrn "[PROTON] Port forwarding failed!"
-        fi
+        while true; do
+            port=$(natpmpc -g "${vpn_gw}" -a 1 0 udp 60 | grep -P -o -m 1 '(?<=Mapped public port\s)\d+')
+            if [[ -n "${port}" ]]; then
+                natpmpc -g "${vpn_gw}" -a 1 0 tcp 60 &> /dev/null
+                echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port"
+            else
+                log_wrn "[PROTON] Port forwarding failed!"
+                break
+            fi
+            sleep 45
+        done
     fi
-    sleep 45
+    sleep 300
 done
