@@ -47,14 +47,14 @@ while true; do
                     log_inf "[VPN] Firewall rules have changed, updated rules:"
                     echo "${new_firewall_rules}"
                 fi
+                old_port="${port}"
+                echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port_validated"
                 # shellcheck source=/dev/null
                 source "${APP_DIR}/forwarded_port_update_app"
                 if [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh" ]]; then
                     log_inf "[FORWARDER] Script [${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh] found. Executing..."
                     bash "${CONFIG_DIR}/wireguard/${VPN_CONF}-port.sh"
                 fi
-                old_port="${port}"
-                echo "${port}" > "${CONFIG_DIR}/wireguard/forwarded_port_validated"
                 log_inf "[FORWARDER] Checking if forwarded port [${port}] is reachable..."
                 i=0; while [[ ${i} -lt 5 ]]; do
                     ((i+=1))
