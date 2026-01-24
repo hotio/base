@@ -4,5 +4,5 @@
   "upstream_digest_arm64": "sha256:0406aba87cff4e77d400a3e9e85acf0e07cedf49d633b55d89928bdfb8bfa0fd",
   "upstream_image": "ubuntu",
   "upstream_tag": "24.04",
-  "version_s6": "3.2.1.0"
+  "version_s6": "3.2.2.0"
 }
