@@ -9,7 +9,7 @@ umask "${UMASK}"
 pia_server_hostname=$(grep '^# hostname: ' "/dev/shm/${VPN_CONF}.conf" | awk -F ': ' '{print $2}')
 pia_server_ip=$(grep '^# ip: ' "/dev/shm/${VPN_CONF}.conf" | awk -F ': ' '{print $2}')
 
-while true; do
+i=0; while true; do
     if [[ "${VPN_PIA_PORT_FORWARD_PERSIST}" == "true" ]] && [[ -f "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json" ]]; then
         log_inf "[PIA] Using persistent forwarded port."
         pia_response=$(cat "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json")
@@ -18,6 +18,7 @@ while true; do
         pia_response=$(curl --retry 5 --retry-max-time 60 --max-time 10 -Gs --connect-to "$pia_server_hostname::$pia_server_ip:" --cacert "${CONFIG_DIR}/wireguard/pia-certificate.crt" --data-urlencode "token=$(pia_get_token)" "https://${pia_server_hostname}:19999/getSignature")
     fi
     if [[ $(echo "${pia_response}" | jq -re '.status') == "OK" ]]; then
+        i=0
         if [[ "${VPN_PIA_PORT_FORWARD_PERSIST}" == "true" ]]; then
             echo "${pia_response}" > "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json"
             find "${CONFIG_DIR}/wireguard/${VPN_CONF}.persist.json" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
@@ -46,6 +47,11 @@ while true; do
         done
     else
         log_wrn "[PIA] Forwarded port request failed."
+        ((i+=1))
+        if [[ ${i} -gt 5 ]]; then
+            log_err "[PIA] Forwarded port request failed multiple times! Exiting..."
+            exit 110
+        fi
     fi
     sleep 60
 done
