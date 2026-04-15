@@ -1,7 +1,7 @@
 {
   "description": "Ubuntu 24.04",
-  "upstream_digest_amd64": "sha256:e21f810fa78c09944446ec02048605eb3ab1e4e2e261c387ecc7456b38400d79",
-  "upstream_digest_arm64": "sha256:11c7dd0cbd7effee6cd4f11811caffb5fdf682f1667c7f152c5cee7d32cc337c",
+  "upstream_digest_amd64": "sha256:cdb5fd928fced577cfecf12c8966e830fcdf42ee481fb0b91904eeddc2fe5eff",
+  "upstream_digest_arm64": "sha256:7607b6f97024ef850f1bd6e91a89273beb5973d04432c5b87f15f813d64b9c05",
   "upstream_image": "ubuntu",
   "upstream_tag": "24.04",
   "version_s6": "3.2.2.0"
