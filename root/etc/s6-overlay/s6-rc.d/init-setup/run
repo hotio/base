@@ -105,7 +105,6 @@ if [[ -f /etc/os-release ]] && [[ ${UPDATE_SYSTEM_PACKAGES} == true ]]; then
     . /etc/os-release
     case "${ID}" in
         alpine)
-            apk update --no-cache
             apk upgrade --no-cache --available
             ;;
         ubuntu)

@@ -30,8 +30,7 @@ VOLUME ["${CONFIG_DIR}"]
 ENTRYPOINT ["/init"]
 
 # install packages
-RUN apk update --no-cache && \
-    apk upgrade --no-cache --available && \
+RUN apk upgrade --no-cache --available && \
     apk add --no-cache bash ca-certificates coreutils curl dos2unix findutils grep ipcalc iproute2 jq libcap-utils nftables outils-rs p7zip privoxy python3 sed shadow tzdata unbound unzip wget wireguard-tools && \
     apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community figlet libnatpmp
 
