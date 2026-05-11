@@ -4,8 +4,8 @@ ARG UPSTREAM_DIGEST_ARM64
 FROM ubuntu AS builder
 ARG UNRAR_VER=7.1.10
 ADD https://www.rarlab.com/rar/unrarsrc-${UNRAR_VER}.tar.gz /tmp/unrar.tar.gz
-RUN apt update && \
-    apt install -y --no-install-recommends --no-install-suggests build-essential && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends --no-install-suggests build-essential && \
     tar -xzf /tmp/unrar.tar.gz && \
     cd unrar && \
     sed -i 's|LDFLAGS=-pthread|LDFLAGS=-pthread -static|' makefile && \
@@ -32,15 +32,15 @@ ENTRYPOINT ["/init"]
 
 ARG DEBIAN_FRONTEND="noninteractive"
 # install packages
-RUN apt update && \
-    apt install -y --no-install-recommends --no-install-suggests \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends --no-install-suggests \
         ca-certificates curl dos2unix figlet ipcalc-ng iproute2 iputils-ping jq libcap2-bin locales natpmpc nftables p7zip-full privoxy python3 rs tzdata unbound unzip wget wireguard-tools xz-utils && \
     ln -s ipcalc-ng /usr/bin/ipcalc && \
 # generate locale
     locale-gen en_US.UTF-8 && \
 # clean up
-    apt autoremove -y && \
-    apt clean && \
+    apt-get autoremove -y && \
+    apt-get clean && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
 
 COPY --from=builder /usr/bin/unrar /usr/bin/unrar
