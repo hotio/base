@@ -109,9 +109,12 @@ if [[ -f /etc/os-release ]] && [[ ${UPDATE_SYSTEM_PACKAGES} == true ]]; then
             apk upgrade --no-cache --available
             ;;
         ubuntu)
+            export DEBIAN_FRONTEND="noninteractive"
             apt-get update
             apt-get upgrade -y
             apt-get autoremove -y
+            apt-get clean
+            rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
             ;;
         *)
             log_wrn "Couldn't identify the OS, skipping package updates."
