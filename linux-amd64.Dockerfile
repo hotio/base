@@ -33,6 +33,7 @@ ENTRYPOINT ["/init"]
 ARG DEBIAN_FRONTEND="noninteractive"
 # install packages
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends --no-install-suggests \
         ca-certificates curl dos2unix figlet ipcalc-ng iproute2 iputils-ping jq libcap2-bin locales natpmpc nftables p7zip-full privoxy python3 rs tzdata unbound unzip wget wireguard-tools xz-utils && \
     ln -s ipcalc-ng /usr/bin/ipcalc && \
