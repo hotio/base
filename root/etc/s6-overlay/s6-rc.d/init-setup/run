@@ -43,7 +43,6 @@ PUID=${PUID}
 PGID=${PGID}
 UMASK=${UMASK}
 TZ=${TZ}
-UPDATE_SYSTEM_PACKAGES=${UPDATE_SYSTEM_PACKAGES}
 PRIVOXY_ENABLED=${PRIVOXY_ENABLED}
 UNBOUND_ENABLED=${UNBOUND_ENABLED}
 UNBOUND_NAMESERVERS=${UNBOUND_NAMESERVERS}
@@ -99,25 +98,3 @@ done
 
 log_inf "Taking ownership of [${CONFIG_DIR}]."
 find "${CONFIG_DIR}" -maxdepth 0 \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
-
-if [[ -f /etc/os-release ]] && [[ ${UPDATE_SYSTEM_PACKAGES} == true ]]; then
-    log_inf "Updating system packgages..."
-    . /etc/os-release
-    case "${ID}" in
-        alpine)
-            apk update --no-cache
-            apk upgrade --no-cache --available
-            ;;
-        ubuntu)
-            export DEBIAN_FRONTEND="noninteractive"
-            apt-get update
-            apt-get upgrade -y
-            apt-get autoremove -y
-            apt-get clean
-            rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
-            ;;
-        *)
-            log_wrn "Couldn't identify the OS, skipping package updates."
-            ;;
-    esac
-fi
