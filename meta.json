@@ -1,6 +1,5 @@
 {
   "description": "Ubuntu 24.04",
-  "packages_hash": "1d55ec92290f3b7fa9dd63238dc22d1d61e1620c",
   "upstream_digest_amd64": "sha256:cdb5fd928fced577cfecf12c8966e830fcdf42ee481fb0b91904eeddc2fe5eff",
   "upstream_digest_arm64": "sha256:7607b6f97024ef850f1bd6e91a89273beb5973d04432c5b87f15f813d64b9c05",
   "upstream_image": "ubuntu",
