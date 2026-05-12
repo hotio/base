@@ -1,9 +1,9 @@
 {
-  "description": "Alpine 3.22",
+  "description": "Alpine 3.23",
   "packages_hash": "9b616e04ffd2febaa7233517935ae8570774710f",
   "upstream_digest_amd64": "sha256:2039be0c5ec6ce8566809626a252c930216a92109c043f282504accb5ee3c0c6",
   "upstream_digest_arm64": "sha256:a46b5c913cad8b1038883ec9aff6003b4a11fdae3229a8e9e3a68f757d724cef",
   "upstream_image": "alpine",
-  "upstream_tag": "3.22",
+  "upstream_tag": "3.23",
   "version_s6": "3.2.3.0"
 }
