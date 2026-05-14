@@ -1,0 +1,415 @@
+name: build-on-call
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+        - platform: linux-amd64
+          runner: ubuntu-24.04
+        - platform: linux-arm64
+          runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    outputs:
+      meta-version:                              ${{ steps.meta.outputs.meta-version }}
+      meta-description:                          ${{ steps.meta.outputs.meta-description }}
+      meta-hide:                                 ${{ steps.meta.outputs.meta-hide }}
+      meta-created:                              ${{ steps.meta.outputs.meta-created }}
+      image-tag-full-linux-amd64:                ${{ steps.meta.outputs.image-tag-full-linux-amd64 }}
+      image-tag-full-linux-arm64:                ${{ steps.meta.outputs.image-tag-full-linux-arm64 }}
+      image-tag-branch:                          ${{ steps.meta.outputs.image-tag-branch }}
+      image-tag-branch-sha:                      ${{ steps.meta.outputs.image-tag-branch-sha }}
+      image-tag-branch-version:                  ${{ steps.meta.outputs.image-tag-branch-version }}
+      image-tag-branch-semver-major:             ${{ steps.meta.outputs.image-tag-branch-semver-major }}
+      image-tag-branch-semver-major-minor:       ${{ steps.meta.outputs.image-tag-branch-semver-major-minor }}
+      image-tag-branch-semver-major-minor-patch: ${{ steps.meta.outputs.image-tag-branch-semver-major-minor-patch }}
+      image-tag-latest:                          ${{ steps.meta.outputs.image-tag-latest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check if Platform Dockerfile Exists
+        id: platform-exists
+        run: |
+          (test -f ${{ matrix.platform }}.Dockerfile && echo "result=ok" >> $GITHUB_OUTPUT) || echo "result=nok" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        if: (steps.platform-exists.outputs.result == 'ok')
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to ghcr.io
+        if: (steps.platform-exists.outputs.result == 'ok')
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Metadata for Next Steps
+        if: (steps.platform-exists.outputs.result == 'ok')
+        id: meta
+        env:
+          PLATFORM:         ${{ matrix.platform }}
+          BRANCH:           ${{ github.ref_name }}
+          RUN_NUMBER:       ${{ github.run_number }}
+          REPOSITORY:       ${{ github.repository }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          SHA:              ${{ github.sha }}
+          SERVER_URL:       ${{ github.server_url }}
+        run: |
+          wget -O ./semver https://raw.githubusercontent.com/fsaintjacques/semver-tool/refs/tags/3.4.0/src/semver && chmod +x ./semver
+          VERSION=$(jq -r '.version // empty' < meta.json)
+          VERSION_CLEAN=$(sed 's/[^[:alnum:]\.\_\-]/-/g' <<< "${VERSION}")
+          IS_LATEST=$(jq -r '.latest // false' < meta.json)
+          if [[ ${BRANCH} == *pr ]]; then
+            TAG="${BRANCH}-$(jq -r '.version_branch // empty' < meta.json | sed 's/[^[:alnum:]\.\_\-]/-/g')"
+          else
+            TAG="${BRANCH}"
+          fi
+          echo "meta-description=$(jq -r '.description // empty' < meta.json)" >> $GITHUB_OUTPUT
+          echo "meta-hide=$(jq -r '.hide // false' < meta.json)" >> $GITHUB_OUTPUT
+          echo "meta-created=$(date --utc --date=@$(git show -s --format=%ct $(git rev-parse --short HEAD)) +'%Y-%m-%dT%H:%M:%S.000Z')" >> $GITHUB_OUTPUT
+          echo "meta-source-url=${SERVER_URL}/${REPOSITORY}/tree/${BRANCH}" >> $GITHUB_OUTPUT
+          echo "meta-docs-url=https://hotio.dev/containers/${REPOSITORY/${REPOSITORY_OWNER}\//}" >> $GITHUB_OUTPUT
+          echo "meta-version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "image-tag-full=${REPOSITORY}:${TAG}-${SHA:0:7}-${RUN_NUMBER}-${PLATFORM}" >> $GITHUB_OUTPUT
+          echo "image-tag-full-${PLATFORM}=${REPOSITORY}:${TAG}-${SHA:0:7}-${RUN_NUMBER}-${PLATFORM}" >> $GITHUB_OUTPUT
+          echo "image-tag-branch=${REPOSITORY}:${TAG}" >> $GITHUB_OUTPUT
+          echo "image-tag-branch-sha=${REPOSITORY}:${TAG}-${SHA:0:7}" >> $GITHUB_OUTPUT
+          if [[ -n ${VERSION_CLEAN} ]]; then
+            echo "image-tag-branch-version=${REPOSITORY}:${TAG}-${VERSION_CLEAN}" >> $GITHUB_OUTPUT
+          fi
+          if [[ $(./semver validate "${VERSION}") == "valid" ]]; then
+            echo "image-tag-branch-semver-major=${REPOSITORY}:${TAG}-v$(./semver get major ${VERSION})" >> $GITHUB_OUTPUT
+            echo "image-tag-branch-semver-major-minor=${REPOSITORY}:${TAG}-v$(./semver get major ${VERSION}).$(./semver get minor ${VERSION})" >> $GITHUB_OUTPUT
+            echo "image-tag-branch-semver-major-minor-patch=${REPOSITORY}:${TAG}-v$(./semver get major ${VERSION}).$(./semver get minor ${VERSION}).$(./semver get patch ${VERSION})" >> $GITHUB_OUTPUT
+          fi
+          if [[ ${IS_LATEST} == true ]]; then
+            echo "image-tag-latest=${REPOSITORY}:latest" >> $GITHUB_OUTPUT
+          fi
+          [[ ${PLATFORM} == linux-amd64 ]] && [[ $(jq -r '.test_amd64' < meta.json) == true ]] && echo "do_smoketest=ok" >> $GITHUB_OUTPUT
+          [[ ${PLATFORM} == linux-arm64 ]] && [[ $(jq -r '.test_arm64' < meta.json) == true ]] && echo "do_smoketest=ok" >> $GITHUB_OUTPUT
+          echo 'build-args<<EOF' >> $GITHUB_OUTPUT
+            jq -r 'to_entries[] | [(.key | ascii_upcase),.value] | join("=")' < meta.json >> $GITHUB_OUTPUT
+            echo "PACKAGE_VERSION=${TAG}-${SHA:0:7}" >> $GITHUB_OUTPUT
+            echo "IMAGE_STATS=$(jq '.app = "'"${REPOSITORY/${REPOSITORY_OWNER}\//}"'" | .image = "'"${REPOSITORY}:${TAG}"'" | .revision = "'"${SHA:0:7}"'" | .version = "'"${VERSION}"'"' <<< "{}" | base64 -w 0)" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      - name: Build Image
+        if: (steps.platform-exists.outputs.result == 'ok')
+        uses: docker/build-push-action@v7
+        with:
+          provenance: false
+          load: true
+          push: true
+          file: ./${{ matrix.platform }}.Dockerfile
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.image-tag-full }}
+          labels: |
+            org.opencontainers.image.created=${{ steps.meta.outputs.meta-created }}
+            org.opencontainers.image.title=${{ steps.meta.outputs.image-tag-branch }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ steps.meta.outputs.meta-source-url }}
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+            org.opencontainers.image.documentation=${{ steps.meta.outputs.meta-docs-url }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.meta-version }}
+          build-args: |
+            ${{ steps.meta.outputs.build-args }}
+
+      - name: Create Packages File
+        if: (steps.platform-exists.outputs.result == 'ok')
+        env:
+          IMAGE: ghcr.io/${{ steps.meta.outputs.image-tag-full }}
+        run: |
+          docker run --quiet --rm --entrypoint="" -v ${GITHUB_WORKSPACE}/:/repo -e PACKAGES="/repo/packages.txt" "${IMAGE}" sh -c 'if grep -q alpine < /etc/os-release; then apk upgrade --no-cache --available >/dev/null 2>&1 && apk -v info 2>/dev/null | sort > ${PACKAGES}; else export DEBIAN_FRONTEND=noninteractive && apt-get update >/dev/null 2>&1 && apt-get upgrade -y >/dev/null 2>&1 && dpkg-query --showformat="\${Package}-\${Version}\n" --show 2>/dev/null | sort > ${PACKAGES}; fi'
+
+      - name: Smoke Test
+        if: (steps.platform-exists.outputs.result == 'ok') && (steps.meta.outputs.do_smoketest == 'ok')
+        id: smoketest
+        env:
+          IMAGE: ghcr.io/${{ steps.meta.outputs.image-tag-full }}
+        run: |
+          test_url=$(jq -r '.test_url' < meta.json)
+          exitcode=0
+          docker run --quiet --network host -d --name service "${IMAGE}"
+          curl -fsSL --retry-all-errors --retry 60 --retry-max-time 120 -m 10 -b /dev/shm/cookie "${test_url}" --output /dev/null || exitcode=$?
+          docker logs service > "smoketest.log" 2>&1
+          [[ ${exitcode} == 0 ]] && echo "result=ok" >> $GITHUB_OUTPUT || echo "result=nok" >> $GITHUB_OUTPUT
+          exit ${exitcode}
+
+      - name: Upload Artifacts
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          if-no-files-found: warn
+          name: ${{ github.ref_name }}-${{ github.sha }}-results-${{ matrix.platform }}
+          path: |
+            packages.txt
+            smoketest.log
+
+  publish:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        registry: [ghcr.io]
+    needs: [build]
+    steps:
+      - name: Login to ghcr.io
+        if: (matrix.registry == 'ghcr.io')
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Manifests
+        uses: nick-fields/retry@v4
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+          REGISTRY:                                  ${{ matrix.registry }}
+          IMAGE_TAG_FULL_LINUX_AMD64:                ${{ needs.build.outputs.image-tag-full-linux-amd64 }}
+          IMAGE_TAG_FULL_LINUX_ARM64:                ${{ needs.build.outputs.image-tag-full-linux-arm64 }}
+          IMAGE_TAG_BRANCH:                          ${{ needs.build.outputs.image-tag-branch }}
+          IMAGE_TAG_BRANCH_SHA:                      ${{ needs.build.outputs.image-tag-branch-sha }}
+          IMAGE_TAG_BRANCH_VERSION:                  ${{ needs.build.outputs.image-tag-branch-version }}
+          IMAGE_TAG_BRANCH_SEMVER_MAJOR:             ${{ needs.build.outputs.image-tag-branch-semver-major }}
+          IMAGE_TAG_BRANCH_SEMVER_MAJOR_MINOR:       ${{ needs.build.outputs.image-tag-branch-semver-major-minor }}
+          IMAGE_TAG_BRANCH_SEMVER_MAJOR_MINOR_PATCH: ${{ needs.build.outputs.image-tag-branch-semver-major-minor-patch }}
+          IMAGE_TAG_LATEST:                          ${{ needs.build.outputs.image-tag-latest }}
+        with:
+          max_attempts: 3
+          timeout_minutes: 5
+          retry_wait_seconds: 30
+          command: |
+            [[ -n "${IMAGE_TAG_FULL_LINUX_AMD64}" ]] && IMAGE_TAG_FULL_LINUX_AMD64=${REGISTRY}/${IMAGE_TAG_FULL_LINUX_AMD64}
+            [[ -n "${IMAGE_TAG_FULL_LINUX_ARM64}" ]] && IMAGE_TAG_FULL_LINUX_ARM64=${REGISTRY}/${IMAGE_TAG_FULL_LINUX_ARM64}
+            echo "${REGISTRY}/${IMAGE_TAG_BRANCH} ${IMAGE_TAG_FULL_LINUX_AMD64} ${IMAGE_TAG_FULL_LINUX_ARM64}" > manifest.list
+            echo "${REGISTRY}/${IMAGE_TAG_BRANCH_SHA} ${IMAGE_TAG_FULL_LINUX_AMD64} ${IMAGE_TAG_FULL_LINUX_ARM64}" >> manifest.list
+            if [[ -n "${IMAGE_TAG_BRANCH_VERSION}" ]]; then
+              echo "${REGISTRY}/${IMAGE_TAG_BRANCH_VERSION} ${IMAGE_TAG_FULL_LINUX_AMD64} ${IMAGE_TAG_FULL_LINUX_ARM64}" >> manifest.list
+            fi
+            if [[ -n "${IMAGE_TAG_BRANCH_SEMVER_MAJOR_MINOR_PATCH}" ]]; then
+              echo "${REGISTRY}/${IMAGE_TAG_BRANCH_SEMVER_MAJOR} ${IMAGE_TAG_FULL_LINUX_AMD64} ${IMAGE_TAG_FULL_LINUX_ARM64}" >> manifest.list
+              echo "${REGISTRY}/${IMAGE_TAG_BRANCH_SEMVER_MAJOR_MINOR} ${IMAGE_TAG_FULL_LINUX_AMD64} ${IMAGE_TAG_FULL_LINUX_ARM64}" >> manifest.list
+              echo "${REGISTRY}/${IMAGE_TAG_BRANCH_SEMVER_MAJOR_MINOR_PATCH} ${IMAGE_TAG_FULL_LINUX_AMD64} ${IMAGE_TAG_FULL_LINUX_ARM64}" >> manifest.list
+            fi
+            if [[ -n "${IMAGE_TAG_LATEST}" ]]; then
+              echo "${REGISTRY}/${IMAGE_TAG_LATEST} ${IMAGE_TAG_FULL_LINUX_AMD64} ${IMAGE_TAG_FULL_LINUX_ARM64}" >> manifest.list
+            fi
+            while read manifest; do
+              docker manifest create $(awk '{print $1}' <<< ${manifest}) $(awk '{print $2}' <<< ${manifest}) $(awk '{print $3}' <<< ${manifest})
+            done < manifest.list
+          on_retry_command:
+            while read manifest; do
+              docker manifest rm $(awk '{print $1}' <<< ${manifest}) || true
+            done < manifest.list
+
+      - name: Push Manifests
+        uses: nick-fields/retry@v4
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+        with:
+          max_attempts: 3
+          timeout_minutes: 5
+          retry_wait_seconds: 30
+          command: |
+            while read manifest; do
+              docker manifest push $(awk '{print $1}' <<< ${manifest})
+            done < manifest.list
+
+  packages:
+    runs-on: ubuntu-24.04
+    needs: [build, publish]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ github.ref_name }}-${{ github.sha }}-results-linux-amd64
+
+      - name: Commit Packages File
+        uses: nick-fields/retry@v4
+        with:
+          max_attempts: 3
+          timeout_minutes: 5
+          retry_wait_seconds: 30
+          command: |
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            rm -f smoketest.log
+            git add packages.txt >/dev/null 2>&1 || true
+            if git commit -m "Packages File update [skip ci]"; then
+              git push
+            fi
+
+  tags:
+    runs-on: ubuntu-24.04
+    needs: [build, publish, packages]
+    steps:
+      - name: Update tags
+        uses: nick-fields/retry@v4
+        env:
+          PERSONAL_TOKEN:                            ${{ secrets.PERSONAL_TOKEN }}
+          WORKSPACE:                                 ${{ github.workspace }}
+          RUN_ID:                                    ${{ github.run_id }}
+          REPOSITORY:                                ${{ github.repository }}
+          REPOSITORY_WEBSITE:                        ${{ github.repository_owner }}/website
+          SERVER_URL:                                ${{ github.server_url }}
+          COMMIT_MESSAGE:                            ${{ github.event.head_commit.message }}
+          COMMIT_SHA:                                ${{ github.sha }}
+          HIDE:                                      ${{ needs.build.outputs.meta-hide }}
+          DESCRIPTION:                               ${{ needs.build.outputs.meta-description }}
+          CREATED:                                   ${{ needs.build.outputs.meta-created }}
+          IMAGE_TAG_BRANCH:                          ${{ needs.build.outputs.image-tag-branch }}
+          IMAGE_TAG_BRANCH_SHA:                      ${{ needs.build.outputs.image-tag-branch-sha }}
+          IMAGE_TAG_BRANCH_VERSION:                  ${{ needs.build.outputs.image-tag-branch-version }}
+          IMAGE_TAG_BRANCH_SEMVER_MAJOR:             ${{ needs.build.outputs.image-tag-branch-semver-major }}
+          IMAGE_TAG_BRANCH_SEMVER_MAJOR_MINOR:       ${{ needs.build.outputs.image-tag-branch-semver-major-minor }}
+          IMAGE_TAG_BRANCH_SEMVER_MAJOR_MINOR_PATCH: ${{ needs.build.outputs.image-tag-branch-semver-major-minor-patch }}
+          IMAGE_TAG_LATEST:                          ${{ needs.build.outputs.image-tag-latest }}
+        with:
+          max_attempts: 3
+          timeout_minutes: 5
+          retry_wait_seconds: 30
+          command: |
+            [[ ${HIDE} == true ]] && exit 0
+            rm -rf "${WORKSPACE}/website"
+            git clone -b "master" "https://${PERSONAL_TOKEN}@github.com/${REPOSITORY_WEBSITE}.git" "${WORKSPACE}/website"
+
+            cd "${WORKSPACE}/website" || exit 1
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+            IMAGE=$(basename "${REPOSITORY}")
+            WEB_FILE="docs/containers/${IMAGE}.md"
+            JSON_FILE="docs/containers/${IMAGE}-tags.json"
+
+            [[ ! -f "${JSON_FILE}" ]] && echo "{}" > "${JSON_FILE}"
+            json=$(cat ${JSON_FILE})
+            jq --sort-keys \
+                --arg tag                                       "${IMAGE_TAG_BRANCH/$REPOSITORY:/}" \
+                --arg image_tag_branch                          "${IMAGE_TAG_BRANCH/$REPOSITORY:/}" \
+                --arg image_tag_branch_sha                      "${IMAGE_TAG_BRANCH_SHA/$REPOSITORY:/}" \
+                --arg image_tag_branch_version                  "${IMAGE_TAG_BRANCH_VERSION/$REPOSITORY:/}" \
+                --arg image_tag_branch_semver_major             "${IMAGE_TAG_BRANCH_SEMVER_MAJOR/$REPOSITORY:/}" \
+                --arg image_tag_branch_semver_major_minor       "${IMAGE_TAG_BRANCH_SEMVER_MAJOR_MINOR/$REPOSITORY:/}" \
+                --arg image_tag_branch_semver_major_minor_patch "${IMAGE_TAG_BRANCH_SEMVER_MAJOR_MINOR_PATCH/$REPOSITORY:/}" \
+                --arg image_tag_latest                          "${IMAGE_TAG_LATEST/$REPOSITORY:/}" \
+                --arg last_updated                              "${CREATED}" \
+                --arg last_updated_url                          "${SERVER_URL}/${REPOSITORY}/actions/runs/${RUN_ID}" \
+                --arg commit_message                            "${COMMIT_MESSAGE}" \
+                --arg commit_sha                                "${COMMIT_SHA}" \
+                --arg description                               "${DESCRIPTION}" \
+                '.[$tag].tags[0] = $image_tag_latest | .[$tag].tags[1] = $image_tag_branch | .[$tag].tags[2] = $image_tag_branch_sha | .[$tag].tags[3] = $image_tag_branch_version | .[$tag].tags[4] = $image_tag_branch_semver_major | .[$tag].tags[5] = $image_tag_branch_semver_major_minor | .[$tag].tags[6] = $image_tag_branch_semver_major_minor_patch | .[$tag].last_updated = $last_updated | .[$tag].commit_message = $commit_message | .[$tag].commit_sha = $commit_sha | .[$tag].description = $description | .[$tag].last_updated_url = $last_updated_url' <<< "${json}" | tee ${JSON_FILE}
+
+            [[ ! -f ${WEB_FILE} ]] && exit 0
+            table_html="<tbody id=\"tags-table-body\">\n"
+            tags_json=$(cat "${JSON_FILE}")
+            branches=$(jq -r 'keys[]' <<< "${tags_json}")
+            while IFS= read -r branch; do
+              commit_message=$(jq -r --arg branch "${branch}" '.[$branch].commit_message' <<< "${tags_json}")
+              commit_message=${commit_message//$'\n'/-}
+              commit_sha=$(jq -r --arg branch "${branch}" '.[$branch].commit_sha' <<< "${tags_json}")
+              [[ "${commit_sha}" != "null" ]] && commit_message="<a href=\"https://github.com/${REPOSITORY}/commit/${commit_sha}\" target=\"_blank\">${commit_message}</a>"
+              description=$(jq -r --arg branch "${branch}" '.[$branch].description' <<< "${tags_json}")
+              last_updated=$(jq -r --arg branch "${branch}" '.[$branch].last_updated' <<< "${tags_json}")
+              last_updated=$(date --utc --date "${last_updated}" +"%Y-%m-%d %H:%M:%S")
+              last_updated_url=$(jq -r --arg branch "${branch}" '.[$branch].last_updated_url' <<< "${tags_json}")
+              [[ "${last_updated_url}" != "null" ]] && last_updated="<a href=\"${last_updated_url}\" target=\"_blank\">${last_updated}</a>"
+              tags_html=""
+              tags=$(jq -r --arg branch "${branch}" '.[$branch].tags[]' <<< "${tags_json}")
+              while IFS= read -r single_tag; do
+                [[ -z ${single_tag} ]] && continue
+                tagID="${RANDOM}"
+                if [[ ${single_tag} == latest ]]; then
+                  tags_html+="<div class=\"tag-decoration-latest\">latest</div>"
+                else
+                  tags_html+="<div id=\"tag${tagID}\" onclick=\"CopyToClipboard('tag${tagID}');return false;\" class=\"tag-decoration\">${single_tag}</div>"
+                fi
+              done <<< "${tags}"
+              table_html+="<tr><td>${tags_html}</td><td>${description}</td><td>${commit_message}</td><td>${last_updated}</td></tr>\n"
+            done <<< "${branches}"
+            table_html+="</tbody>"
+            sed -i -z -e "s^<tbody id=\"tags-table-body\">.*</tbody>^${table_html}^" "${WEB_FILE}"
+            echo "${table_html}"
+
+            git add "${WEB_FILE}"
+            git add "${JSON_FILE}"
+            if git commit -m "Update Tags for [${REPOSITORY}]"; then
+              git push
+            fi
+
+  notify:
+    runs-on: ubuntu-24.04
+    if: always()
+    needs: [build, publish, packages, tags]
+    steps:
+      - name: Send Discord Notification
+        uses: nick-fields/retry@v4
+        env:
+          DISCORD_WEBHOOK:  ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_MENTIONS: ${{ vars.DISCORD_MENTIONS }}
+          COMMIT_MESSAGE:   ${{ github.event.head_commit.message }}
+          RUN_ID:           ${{ github.run_id }}
+          REPOSITORY:       ${{ github.repository }}
+          SERVER_URL:       ${{ github.server_url }}
+          SHA:              ${{ github.sha }}
+          IMAGE_TAG_BRANCH: ${{ needs.build.outputs.image-tag-branch }}
+          VERSION:          ${{ needs.build.outputs.meta-version }}
+          CREATED:          ${{ needs.build.outputs.meta-created }}
+          STATUS:           ${{ needs.tags.result }}
+        with:
+          max_attempts: 3
+          timeout_minutes: 5
+          retry_wait_seconds: 30
+          command: |
+            [[ "${STATUS}" == "success" ]] && COLOR="3066993"
+            [[ "${STATUS}" != "success" ]] && MENTIONS="${DISCORD_MENTIONS}"
+            json=$(jq -nc --arg     discord_mentions "${MENTIONS}" \
+                          --arg     title            "${IMAGE_TAG_BRANCH}" \
+                          --arg     url              "${SERVER_URL}/${REPOSITORY}/actions/runs/${RUN_ID}" \
+                          --argjson color            "${COLOR:-15158332}" \
+                          --arg     commit_message   "\`\`\`${COMMIT_MESSAGE:----}\`\`\`" \
+                          --arg     commit_sha_link  "[${SHA:0:7}](${SERVER_URL}/${REPOSITORY}/commit/${SHA})" \
+                          --arg     version          "${VERSION:----}" \
+                          --arg     timestamp        "${CREATED}" \
+                          '{"content": $discord_mentions,
+                            "embeds": [
+                              {
+                                "title": $title,
+                                "url": $url,
+                                "color": $color,
+                                "fields": [
+                                  {
+                                    "name": "Commit Message",
+                                    "value": $commit_message
+                                  },
+                                  {
+                                    "name": "Commit SHA",
+                                    "value": $commit_sha_link,
+                                    "inline": true
+                                  },
+                                  {
+                                    "name": "Version",
+                                    "value": $version,
+                                    "inline": true
+                                  }
+                                ],
+                                "footer": {"text": "Powered by GitHub Actions"},
+                                "timestamp": $timestamp
+                              }
+                          ]}')
+            jq <<< "${json}"
+            curl -fsSL --retry 5 -H "Content-Type: multipart/form-data" -F "payload_json=${json}" "${DISCORD_WEBHOOK}" > /dev/null

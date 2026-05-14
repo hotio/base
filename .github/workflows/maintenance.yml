@@ -1,0 +1,38 @@
+name: maintenance
+
+on:
+  workflow_dispatch:
+
+jobs:
+  do-work:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Do Work
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          PERSONAL_TOKEN:   ${{ secrets.PERSONAL_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          while read REPOSITORY; do
+            while IFS= read -r BRANCH; do
+              git clone -b "${BRANCH}" "https://${PERSONAL_TOKEN}@github.com/${REPOSITORY_OWNER}/${REPOSITORY}.git"
+              cd "${REPOSITORY}" || exit 1
+              ###########################################
+              echo "Do Stuff!"
+              curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/alpinevpn/.github/workflows/call-update.yml > .github/workflows/call-update.yml
+              curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/alpinevpn/.github/workflows/call-build.yml > .github/workflows/call-build.yml
+              #rm -f tags.json
+              #rm -f .dockerignore
+              #mv VERSION.json meta.json
+              #find . -iname '*.sh' -exec sed -i -e 's/VERSION.json/meta.json/g' {} +
+              git add --all
+              if git commit -m "Maintenance Updates [skip ci]"; then
+                git push
+              fi
+              ###########################################
+              cd .. || exit 1
+              rm -rf "${REPOSITORY}"
+            done < <(curl -fsSL --header "Authorization: Bearer ${GITHUB_TOKEN}" "https://api.github.com/repos/${REPOSITORY_OWNER}/${REPOSITORY}/branches" | jq -re '.[] | select(.name!="workflows") | .name')
+          done < <(curl -fsSL --header "Authorization: Bearer ${GITHUB_TOKEN}" "https://api.github.com/users/${REPOSITORY_OWNER}/repos?per_page=1000" | jq -re '.[] | select(.topics[]=="docker-image") | .name')

@@ -1,0 +1,83 @@
+name: update-on-call
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+on:
+  workflow_call:
+
+jobs:
+  get-branches:
+    runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.branches.outputs.branches }}
+    steps:
+      - name: Get all branches for the repository
+        id: branches
+        env:
+          REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          branches=$(curl -fsSL --header "Authorization: Bearer ${GITHUB_TOKEN}" "https://api.github.com/repos/${REPOSITORY}/branches" | jq -re '.[] | select(.name!="workflows") | [.name] | @csv' | paste -sd, -)
+          echo "branches=[${branches}]" >> "$GITHUB_OUTPUT"
+
+  update:
+    needs: get-branches
+    strategy:
+      matrix:
+        branches: ${{ fromJSON(needs.get-branches.outputs.branches) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.branches }}
+
+      - name: Login to ghcr.io
+        continue-on-error: true
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for version changes
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [[ -f update-versions.sh ]] && \
+            bash update-versions.sh
+
+      - name: Check for upstream image changes
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [[ -f update-upstream.sh ]] && \
+            bash update-upstream.sh
+
+      - name: Check for updated packages
+        continue-on-error: true
+        if: (!endsWith(github.ref_name, 'pr'))
+        env:
+          BRANCH:     ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          docker run --quiet --rm --entrypoint="" -v ./:/repo -e PACKAGES="/repo/packages.txt" "ghcr.io/${REPOSITORY}:${BRANCH}" \
+            sh -c 'if grep -q alpine < /etc/os-release; then apk upgrade --no-cache --available >/dev/null 2>&1 && apk -v info 2>/dev/null | sort > ${PACKAGES}; else export DEBIAN_FRONTEND=noninteractive && apt-get update >/dev/null 2>&1 && apt-get upgrade -y >/dev/null 2>&1 && dpkg-query --showformat="\${Package}-\${Version}\n" --show 2>/dev/null | sort > ${PACKAGES}; fi'
+
+      - name: Commit changes
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          [[ -f meta.json ]] && git add meta.json
+          [[ -f packages.txt ]] && git add packages.txt
+          commit_message="Version, Upstream or Packages update"
+          [[ "${BRANCH}" == *pr ]] && commit_message+=" [skip ci]"
+          if git commit -m "${commit_message}"; then
+            git push
+          fi
