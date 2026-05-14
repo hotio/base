@@ -62,7 +62,7 @@ jobs:
         continue-on-error: true
         if: (!endsWith(github.ref_name, 'pr'))
         env:
-          BRANCH:     ${{ github.ref_name }}
+          BRANCH:     ${{ matrix.branches }}
           REPOSITORY: ${{ github.repository }}
         run: |
           docker run --quiet --rm --entrypoint="" -v ./:/repo -e PACKAGES="/repo/packages.txt" "ghcr.io/${REPOSITORY}:${BRANCH}" \
@@ -70,7 +70,7 @@ jobs:
 
       - name: Commit changes
         env:
-          BRANCH: ${{ github.ref_name }}
+          BRANCH: ${{ matrix.branches }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
