@@ -21,8 +21,8 @@ jobs:
               cd "${REPOSITORY}" || exit 1
               ###########################################
               echo "Do Stuff!"
-              curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/alpinevpn/.github/workflows/call-update.yml > .github/workflows/call-update.yml
-              curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/alpinevpn/.github/workflows/call-build.yml > .github/workflows/call-build.yml
+              #curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/alpinevpn/.github/workflows/call-update.yml > .github/workflows/call-update.yml
+              #curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/alpinevpn/.github/workflows/call-build.yml > .github/workflows/call-build.yml
               #rm -f tags.json
               #rm -f .dockerignore
               #mv VERSION.json meta.json
