@@ -1,0 +1,12 @@
+name: call-build
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore:    
+      - 'workflows'
+
+jobs:
+  call:
+    uses: hotio/base/.github/workflows/build-on-call.yml@workflows
+    secrets: inherit
