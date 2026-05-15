@@ -1,9 +1,5 @@
 name: update-on-call
 
-concurrency:
-  group: ${{ github.repository }}-${{ github.ref_name }}
-  cancel-in-progress: true
-
 on:
   workflow_call:
 
@@ -24,6 +20,9 @@ jobs:
 
   update:
     needs: get-branches
+    concurrency:
+      group: ${{ github.repository }}-update-${{ matrix.branches }}
+      cancel-in-progress: true
     strategy:
       matrix:
         branches: ${{ fromJSON(needs.get-branches.outputs.branches) }}
