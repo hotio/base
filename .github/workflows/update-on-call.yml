@@ -33,6 +33,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ matrix.branches }}
+          token: ${{ secrets.PERSONAL_TOKEN }}
 
       - name: Login to ghcr.io
         continue-on-error: true
