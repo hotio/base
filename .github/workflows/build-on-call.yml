@@ -249,8 +249,8 @@ jobs:
             git config --global user.name "github-actions[bot]"
             git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
             rm -f smoketest.log
-            git add packages.txt >/dev/null 2>&1 || true
-            if git commit -m "Packages File update [skip ci]"; then
+            git add packages.txt || true
+            if git commit -m "Update packages.txt [skip ci]"; then
               git push
             fi
 
