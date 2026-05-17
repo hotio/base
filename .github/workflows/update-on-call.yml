@@ -42,13 +42,24 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check for version changes
+      - name: Update meta.json
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          [[ -f update-versions.sh ]] && \
+          if [[ -f update-versions.sh ]]; then
             bash update-versions.sh
+          else
+            while read -r line; do
+                key="${line%%=*}"
+                key="${key%__command}"
+                command="${line#*=}"
+                value=$(eval "${command}")
+                json=$(cat meta.json)
+                jq --sort-keys --arg key "$key" --arg value "$value" '.[$key] = $value' <<< "${json}" > meta.json
+                echo "Result: [${key}] [${command}] [${value}]"
+            done < <(jq -r 'to_entries[] | [(.key),.value] | join("=")' < meta.json | grep '__command')
+          fi
 
       - name: Check for upstream image changes
         continue-on-error: true
@@ -58,7 +69,7 @@ jobs:
           [[ -f update-upstream.sh ]] && \
             bash update-upstream.sh
 
-      - name: Check for updated packages
+      - name: Update packages.txt
         continue-on-error: true
         if: (!endsWith(github.ref_name, 'pr'))
         env:
