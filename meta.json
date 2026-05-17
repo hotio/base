@@ -5,5 +5,5 @@
   "upstream_image": "alpine",
   "upstream_tag": "3.23",
   "version_s6": "3.2.3.0",
-  "version_s6_command": "curl -fsSL ${GITHUB_TOKEN:+--header \"Authorization: Bearer ${GITHUB_TOKEN}\"} \"https://api.github.com/repos/just-containers/s6-overlay/releases/latest\" | jq -re '.tag_name' | sed -E 's/^v//'"
+  "version_s6__command": "curl -fsSL ${GITHUB_TOKEN:+--header \"Authorization: Bearer ${GITHUB_TOKEN}\"} \"https://api.github.com/repos/just-containers/s6-overlay/releases/latest\" | jq -re '.tag_name' | sed -E 's/^v//'"
 }
