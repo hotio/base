@@ -4,5 +4,6 @@
   "upstream_digest_arm64": "sha256:7607b6f97024ef850f1bd6e91a89273beb5973d04432c5b87f15f813d64b9c05",
   "upstream_image": "ubuntu",
   "upstream_tag": "24.04",
-  "version_s6": "3.2.3.0"
+  "version_s6": "3.2.3.0",
+  "version_s6_command": "curl -fsSL ${GITHUB_TOKEN:+--header \"Authorization: Bearer ${GITHUB_TOKEN}\"} \"https://api.github.com/repos/just-containers/s6-overlay/releases/latest\" | jq -re '.tag_name' | sed -E 's/^v//'"
 }
