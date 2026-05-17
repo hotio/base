@@ -2,7 +2,7 @@ ARG UPSTREAM_IMAGE
 ARG UPSTREAM_DIGEST_AMD64
 
 FROM ubuntu AS builder
-ARG UNRAR_VER=7.1.10
+ARG UNRAR_VER=7.2.6
 ADD https://www.rarlab.com/rar/unrarsrc-${UNRAR_VER}.tar.gz /tmp/unrar.tar.gz
 RUN apt-get update && \
     apt-get install -y --no-install-recommends --no-install-suggests build-essential && \
