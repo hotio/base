@@ -125,7 +125,7 @@ jobs:
           build-args: |
             ${{ steps.meta.outputs.build-args }}
 
-      - name: Create Packages File
+      - name: Update packages.txt
         if: (steps.platform-exists.outputs.result == 'ok')
         env:
           IMAGE: ghcr.io/${{ steps.meta.outputs.image-tag-full }}
@@ -239,7 +239,7 @@ jobs:
         with:
           name: ${{ github.ref_name }}-${{ github.sha }}-results-linux-amd64
 
-      - name: Commit Packages File
+      - name: Commit packages.txt
         uses: nick-fields/retry@v4
         with:
           max_attempts: 3
