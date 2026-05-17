@@ -21,7 +21,7 @@ jobs:
               cd "${REPOSITORY}" || exit 1
               ###########################################
               echo "Do Stuff!"
-              #curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/workflows/.github/workflows/call-update.yml > .github/workflows/call-update.yml
+              curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/noblevpn/build.sh > build.sh
               #curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/workflows/.github/workflows/call-build.yml > .github/workflows/call-build.yml
               #rm -f tags.json
               #rm -f .dockerignore
