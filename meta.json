@@ -1,7 +1,9 @@
 {
   "description": "Alpine 3.23",
   "upstream_digest_amd64": "sha256:4d889c14e7d5a73929ab00be2ef8ff22437e7cbc545931e52554a7b00e123d8b",
+  "upstream_digest_amd64__command": "json=$(cat meta.json) && upstream_image=$(jq -re '.upstream_image' <<< \"${json}\") && upstream_tag=$(jq -re '.upstream_tag' <<< \"${json}\") && manifest=$(skopeo inspect --raw \"docker://${upstream_image}:${upstream_tag}\") && jq -re '.manifests[] | select (.platform.architecture == \"amd64\" and .platform.os == \"linux\").digest' <<< \"${manifest}\"",
   "upstream_digest_arm64": "sha256:378c4c5418f7493bd500ad21ffb43818d0689daaad43e3261859fb417d1481a0",
+  "upstream_digest_arm64__command": "json=$(cat meta.json) && upstream_image=$(jq -re '.upstream_image' <<< \"${json}\") && upstream_tag=$(jq -re '.upstream_tag' <<< \"${json}\") && manifest=$(skopeo inspect --raw \"docker://${upstream_image}:${upstream_tag}\") && jq -re '.manifests[] | select (.platform.architecture == \"arm64\" and .platform.os == \"linux\").digest' <<< \"${manifest}\"",
   "upstream_image": "alpine",
   "upstream_tag": "3.23",
   "version_s6": "3.2.3.0",
