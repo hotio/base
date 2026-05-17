@@ -55,7 +55,7 @@ jobs:
               value=$(eval "${command}")
               json=$(cat meta.json)
               jq --sort-keys --arg key "$key" --arg value "$value" '.[$key] = $value' <<< "${json}" > meta.json
-              echo "Result: [${key}] [${command}] [${value}]"
+              echo "Result: [${key}] [${value}]"
           done < <(jq -r 'to_entries[] | [(.key),.value] | join("=")' < meta.json | grep '__command')
 
       - name: Update packages.txt
