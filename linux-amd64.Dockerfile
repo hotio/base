@@ -2,8 +2,8 @@ ARG UPSTREAM_IMAGE
 ARG UPSTREAM_DIGEST_AMD64
 
 FROM alpine AS builder
-ARG UNRAR_VER=7.2.6
-ADD https://www.rarlab.com/rar/unrarsrc-${UNRAR_VER}.tar.gz /tmp/unrar.tar.gz
+ARG VERSION_UNRAR
+ADD https://www.rarlab.com/rar/${VERSION_UNRAR} /tmp/unrar.tar.gz
 RUN apk --update --no-cache add build-base && \
     tar -xzf /tmp/unrar.tar.gz && \
     cd unrar && \
