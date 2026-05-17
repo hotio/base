@@ -23,7 +23,7 @@ jobs:
               echo "Do Stuff!"
               curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/noblevpn/build.sh > build.sh
               #curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/workflows/.github/workflows/call-build.yml > .github/workflows/call-build.yml
-              #rm -f tags.json
+              rm -f update-upstream.sh
               #rm -f .dockerignore
               #mv VERSION.json meta.json
               #find . -iname '*.sh' -exec sed -i -e 's/VERSION.json/meta.json/g' {} +
