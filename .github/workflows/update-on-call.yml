@@ -76,6 +76,6 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add meta.json || true
           git add packages.txt || true
-          if git commit -m "Version, Upstream or Packages update"; then
+          if git commit -m "Modified: $(git diff --name-only --staged | paste -sd, - | sed 's/,/, /')"; then
             git push
           fi

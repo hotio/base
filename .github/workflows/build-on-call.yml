@@ -250,7 +250,7 @@ jobs:
             git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
             rm -f smoketest.log
             git add packages.txt || true
-            if git commit -m "Update packages.txt [skip ci]"; then
+            if git commit -m "Modified: $(git diff --name-only --staged | paste -sd, - | sed 's/,/, /') [skip ci]"; then
               git push
             fi
 
