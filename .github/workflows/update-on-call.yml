@@ -76,8 +76,6 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add meta.json || true
           git add packages.txt || true
-          commit_message="Version, Upstream or Packages update"
-          [[ "${BRANCH}" == *pr ]] && commit_message+=" [skip ci]"
-          if git commit -m "${commit_message}"; then
+          if git commit -m "Version, Upstream or Packages update"; then
             git push
           fi
