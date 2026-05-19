@@ -21,7 +21,7 @@ jobs:
               cd "${REPOSITORY}" || exit 1
               ###########################################
               echo "Do Stuff!"
-              curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/noblevpn/build.sh > build.sh
+              curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/alpinevpn/build.sh > build.sh
               #curl -fsSL https://raw.githubusercontent.com/hotio/base/refs/heads/workflows/.github/workflows/call-build.yml > .github/workflows/call-build.yml
               #rm -f update-upstream.sh
               #rm -f .dockerignore
