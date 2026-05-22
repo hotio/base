@@ -130,7 +130,7 @@ jobs:
         env:
           IMAGE: ghcr.io/${{ steps.meta.outputs.image-tag-full }}
         run: |
-          docker run --quiet --rm --entrypoint="" -v "${GITHUB_WORKSPACE}/":/repo -e PACKAGES="/repo/packages.txt" "${IMAGE}" sh -c 'if grep -q alpine < /etc/os-release; then apk upgrade --no-cache --available >/dev/null 2>&1 && apk info --format json --fields name,version | jq -re ".[] | [.name, .version] | join(\"=\")" 2>/dev/null | sort > ${PACKAGES}; else export DEBIAN_FRONTEND=noninteractive && apt-get update >/dev/null 2>&1 && apt-get upgrade -y >/dev/null 2>&1 && dpkg-query --showformat="\${Package}=\${Version}\n" --show 2>/dev/null | sort > ${PACKAGES}; fi'
+          docker run --quiet --rm --entrypoint="" -v "${GITHUB_WORKSPACE}/":/repo -e PACKAGES="/repo/packages.txt" "${IMAGE}" sh -c 'if grep -q alpine < /etc/os-release; then apk upgrade --no-cache --available >/dev/null 2>&1 && apk info --format json --fields name,version | jq -re '\''.[] | [.name, .version] | join("=")'\'' 2>/dev/null | sort > ${PACKAGES}; else export DEBIAN_FRONTEND=noninteractive && apt-get update >/dev/null 2>&1 && apt-get upgrade -y >/dev/null 2>&1 && dpkg-query --showformat="\${Package}=\${Version}\n" --show 2>/dev/null | sort > ${PACKAGES}; fi'
       - name: Smoke Test
         if: (steps.platform-exists.outputs.result == 'ok') && (steps.meta.outputs.do_smoketest == 'ok')
         id: smoketest
