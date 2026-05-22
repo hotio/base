@@ -47,15 +47,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          [[ -f update-versions.sh ]] && bash update-versions.sh
           while read -r line; do
-              key="${line%%=*}"
-              key="${key%__command}"
-              command="${line#*=}"
-              value=$(eval "${command}")
-              json=$(cat meta.json)
-              jq --sort-keys --arg key "$key" --arg value "$value" '.[$key] = $value' <<< "${json}" > meta.json
-              echo "Result: [${key}] [${value}]"
+            key="${line%%=*}"
+            key="${key%__command}"
+            command="${line#*=}"
+            value=$(eval "${command}")
+            json=$(cat meta.json)
+            jq --sort-keys --arg key "$key" --arg value "$value" '.[$key] = $value' <<< "${json}" > meta.json
+            echo "Result: [${key}] [${value}]"
           done < <(jq -r 'to_entries[] | [(.key),.value] | join("=")' < meta.json | grep '__command')
 
       - name: Update packages.txt
@@ -67,6 +66,18 @@ jobs:
         run: |
           IMAGE="ghcr.io/${REPOSITORY}:${BRANCH}"
           docker run --quiet --rm --entrypoint="" -v "${GITHUB_WORKSPACE}/":/repo -e PACKAGES="/repo/packages.txt" "${IMAGE}" sh -c 'if grep -q alpine < /etc/os-release; then apk upgrade --no-cache --available >/dev/null 2>&1 && apk info --format json --fields name,version 2>/dev/null | jq -re '\''.[] | [.name, .version] | join("=")'\'' | sort > ${PACKAGES}; else export DEBIAN_FRONTEND=noninteractive && apt-get update >/dev/null 2>&1 && apt-get upgrade -y >/dev/null 2>&1 && dpkg-query --showformat="\${Package}=\${Version}\n" --show 2>/dev/null | sort > ${PACKAGES}; fi'
+          if upstream_tag_sha=$(jq -re '.upstream_tag_sha' < meta.json); then
+            packages_txt=$(cat packages.txt)
+            upstream_image=$(jq -re '.upstream_image' < meta.json | sed 's/ghcr.io\///g')
+            upstream_tag=$(jq -re '.upstream_tag' < meta.json)
+            upstream_sha=${upstream_tag_sha//${upstream_tag}-/}
+            upstream_packages_txt=$(curl -fsSL "https://raw.githubusercontent.com/${upstream_image}/${upstream_sha}/packages.txt")
+            rm -f packages.txt
+            while read -r line; do
+                package="${line%%=*}"
+                grep -q "${package}" <<< "${upstream_packages_txt}" || echo "${line}" >> packages.txt
+            done <<< "${packages_txt}"
+          fi
       - name: Commit changes
         env:
           BRANCH: ${{ matrix.branches }}
@@ -75,6 +86,6 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add meta.json || true
           git add packages.txt || true
-          if git commit -m "Modified: $(git diff --name-only --staged | paste -sd, - | sed 's/,/, /')"; then
+          if git commit -m "Modified: $(git diff --name-only --staged | paste -sd, - | sed 's/,/, /') [skip ci]"; then
             git push
           fi
