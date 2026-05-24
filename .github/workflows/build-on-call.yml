@@ -137,7 +137,7 @@ jobs:
             upstream_tag=$(jq -re '.upstream_tag' < meta.json)
             upstream_sha=${upstream_tag_sha//${upstream_tag}-/}
             upstream_packages_txt=$(curl -fsSL "https://raw.githubusercontent.com/${upstream_image}/${upstream_sha}/packages.txt")
-            rm -f packages.txt
+            rm -f packages.txt && touch packages.txt
             while read -r line; do
                 package="${line%%=*}"
                 grep -q "${package}" <<< "${upstream_packages_txt}" || echo "${line}" >> packages.txt
