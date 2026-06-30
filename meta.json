@@ -8,6 +8,6 @@
   "upstream_tag": "3.23",
   "version_s6": "3.2.3.0",
   "version_s6__command": "curl -fsSL ${GITHUB_TOKEN:+--header \"Authorization: Bearer ${GITHUB_TOKEN}\"} \"https://api.github.com/repos/just-containers/s6-overlay/releases/latest\" | jq -re '.tag_name' | sed -E 's/^v//'",
-  "version_unrar": "unrarsrc-7.2.6.tar.gz",
+  "version_unrar": "unrarsrc-7.2.7.tar.gz",
   "version_unrar__command": "curl -fsSL https://www.rarlab.com/rar_add.htm | grep -o 'unrarsrc-.*.tar.gz'"
 }
