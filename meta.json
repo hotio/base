@@ -1,8 +1,8 @@
 {
   "description": "Ubuntu 24.04",
-  "upstream_digest_amd64": "sha256:019e8eb29a85e74d64925745884f2ec79aa27e3feab36353d24656f4d6b89467",
+  "upstream_digest_amd64": "sha256:1e0a86e57d247923571b75e0aaf48a1449cf8c543d51fb3e07a4a7d7bfa79316",
   "upstream_digest_amd64__command": "json=$(cat meta.json) && upstream_image=$(jq -re '.upstream_image' <<< \"${json}\") && upstream_tag=$(jq -re '.upstream_tag' <<< \"${json}\") && if ! test -f cache-page1.json; then skopeo inspect --raw \"docker://${upstream_image}:${upstream_tag}\" > cache-page1.json; fi && cat cache-page1.json | jq -re '.manifests[] | select (.platform.architecture == \"amd64\" and .platform.os == \"linux\").digest'",
-  "upstream_digest_arm64": "sha256:b17516cd982bf06bdd5d5600253d12a8de017b9eb831cc052b532a0363d294f9",
+  "upstream_digest_arm64": "sha256:95fa486768020359141f1318720f43e7982ef926c792891d984aef9aaf05e7ea",
   "upstream_digest_arm64__command": "json=$(cat meta.json) && upstream_image=$(jq -re '.upstream_image' <<< \"${json}\") && upstream_tag=$(jq -re '.upstream_tag' <<< \"${json}\") && if ! test -f cache-page1.json; then skopeo inspect --raw \"docker://${upstream_image}:${upstream_tag}\" > cache-page1.json; fi && cat cache-page1.json | jq -re '.manifests[] | select (.platform.architecture == \"arm64\" and .platform.os == \"linux\").digest'",
   "upstream_image": "ubuntu",
   "upstream_tag": "24.04",
