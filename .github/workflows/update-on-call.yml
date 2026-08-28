@@ -60,7 +60,7 @@ jobs:
 
       - name: Update packages.txt
         continue-on-error: true
-        if: (!endsWith(github.ref_name, 'pr'))
+        if: (!endsWith(matrix.branches, 'pr'))
         env:
           BRANCH:     ${{ matrix.branches }}
           REPOSITORY: ${{ github.repository }}
