@@ -141,7 +141,8 @@ sed -i "s#^AllowedIPs.*#AllowedIPs = ${allowed_ips%,}#" "/dev/shm/${VPN_CONF}-st
 log_inf "[VPN] AllowedIPs are [${allowed_ips%,}] for interface [${VPN_CONF}]."
 
 wg setconf "${VPN_CONF}" "/dev/shm/${VPN_CONF}-stripped.conf"
-ip link set up dev "${VPN_CONF}"
+mtu=$(grep '^MTU' "/dev/shm/${VPN_CONF}.conf" | awk -F '=' '{print $2}' | xargs)
+ip link set mtu "${mtu:-1420}" up dev "${VPN_CONF}"
 log_inf "[VPN] Interface [${VPN_CONF}] is online."
 
 default4_route_json=$(ip -4 -j route show to default | jq -rc '.[]')
