@@ -220,9 +220,9 @@ jobs:
             while read manifest; do
               docker manifest create $(awk '{print $1}' <<< ${manifest}) $(awk '{print $2}' <<< ${manifest}) $(awk '{print $3}' <<< ${manifest})
             done < manifest.list
-          on_retry_command:
+          on_retry_command: |
             while read manifest; do
-              docker manifest rm $(awk '{print $1}' <<< ${manifest}) || true
+              docker manifest rm "${manifest%% *}" || true
             done < manifest.list
 
       - name: Push Manifests
