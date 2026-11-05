@@ -1,8 +1,8 @@
 {
   "description": "Alpine 3.23",
-  "upstream_digest_amd64": "sha256:3d67941fed5ae436b2bb9791cb3f50a252441c7706bbc5b4e738936df8ff8306",
+  "upstream_digest_amd64": "sha256:644c1ad8fc45cc581ab1b5ea7ec1bebc9b037fd4801ad697ca124deb3f9c9332",
   "upstream_digest_amd64__command": "json=$(cat meta.json) && upstream_image=$(jq -re '.upstream_image' <<< \"${json}\") && upstream_tag=$(jq -re '.upstream_tag' <<< \"${json}\") && if ! test -f cache-page1.json; then skopeo inspect --raw \"docker://${upstream_image}:${upstream_tag}\" > cache-page1.json; fi && cat cache-page1.json | jq -re '.manifests[] | select (.platform.architecture == \"amd64\" and .platform.os == \"linux\").digest'",
-  "upstream_digest_arm64": "sha256:8793abc479381bafd16c9d538b01c5a8dd7eef6aa10a737f2ad828ac73cb80e9",
+  "upstream_digest_arm64": "sha256:5dda816445facf5f7282dc7689a333278834c74265ba25db2e2eb90509e3a9dd",
   "upstream_digest_arm64__command": "json=$(cat meta.json) && upstream_image=$(jq -re '.upstream_image' <<< \"${json}\") && upstream_tag=$(jq -re '.upstream_tag' <<< \"${json}\") && if ! test -f cache-page1.json; then skopeo inspect --raw \"docker://${upstream_image}:${upstream_tag}\" > cache-page1.json; fi && cat cache-page1.json | jq -re '.manifests[] | select (.platform.architecture == \"arm64\" and .platform.os == \"linux\").digest'",
   "upstream_image": "alpine",
   "upstream_tag": "3.23",
