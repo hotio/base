@@ -97,4 +97,4 @@ wireguard-tools-wg=1.0.20250521-r1
 wireguard-tools=1.0.20250521-r1
 xz-libs=5.8.4-r0
 zlib=1.4-r0
-zstd-libs=1.5.7-r2
+zstd-libs=1.6.0-r0
